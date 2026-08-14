@@ -1,15 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Category, Modality, FundingType } from '../types';
-import {
-  RotateCcw,
-  CheckCircle2,
-  Globe,
-  DollarSign,
-  Calendar,
-  ArrowUpDown,
-  Filter,
-} from 'lucide-react';
+import { Sparkles, SendHorizonal, RotateCcw, CheckCircle2, Globe, DollarSign, Calendar, ArrowUpDown } from 'lucide-react';
 
 const TOP_CATEGORIES: Category[] = [
   'Scholarships',
@@ -27,7 +19,8 @@ const TOP_CATEGORIES: Category[] = [
 ];
 
 export const FilterBar: React.FC = () => {
-  const { filters, updateFilter, resetFilters, opportunities } = useApp();
+  const { filters, updateFilter, resetFilters, opportunities, applyDiscoveryIntent, discoverySignals, clearDiscoveryIntent } = useApp();
+  const [draft, setDraft] = useState('');
 
   const handleCategoryToggle = (cat: Category) => {
     if (filters.selectedCategories.includes(cat)) {
@@ -75,8 +68,85 @@ export const FilterBar: React.FC = () => {
     filters.savedOnly ||
     filters.sortBy !== 'best_match';
 
+  const handleDiscoverySubmit = () => {
+    const prompt = draft.trim();
+    if (!prompt) return;
+    applyDiscoveryIntent(prompt);
+  };
+
   return (
     <div className="mb-6 space-y-3">
+      <div className="rounded-2xl border border-violet-500/20 bg-[#0a0514]/90 p-3.5">
+        <div className="flex flex-col gap-2 md:flex-row md:items-center">
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-300">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Describe what you're looking for</span>
+          </div>
+
+          <div className="flex-1 flex items-center gap-2 rounded-xl border border-violet-500/20 bg-black/20 px-3 py-2 focus-within:border-violet-500/50">
+            <input
+              aria-label="Opportunity discovery prompt"
+              type="text"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleDiscoverySubmit();
+                }
+              }}
+              placeholder="I want a fully funded opportunity abroad with research experience and no major requirement..."
+              className="w-full bg-transparent text-sm text-slate-200 placeholder:text-slate-500 outline-none"
+            />
+            <button
+              type="button"
+              aria-label="Apply opportunity discovery prompt"
+              onClick={handleDiscoverySubmit}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-violet-500 transition-colors"
+            >
+              <SendHorizonal className="w-3.5 h-3.5" />
+              <span>Apply</span>
+            </button>
+          </div>
+        </div>
+
+        <p className="mt-2 text-[11px] text-slate-400">
+          Try prompts like “fully funded research abroad,” “summer internships in AI,” or “leadership programs with no major restriction.”
+        </p>
+
+        {discoverySignals && (
+          <div className="mt-3 rounded-xl border border-violet-500/10 bg-[#120a1d]/80 px-3 py-2 text-xs text-slate-300">
+            <div className="flex items-start justify-between gap-3">
+              <p>{discoverySignals.summary}</p>
+              {discoverySignals.noMajorRestriction && (
+                <button
+                  onClick={clearDiscoveryIntent}
+                  className="shrink-0 text-[10px] uppercase tracking-wide text-slate-400 hover:text-white"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-2 text-[10px] text-slate-400">
+              {discoverySignals.fundingTypes.length > 0 && (
+                <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5">
+                  Funding: {discoverySignals.fundingTypes.join(', ')}
+                </span>
+              )}
+              {discoverySignals.categories.length > 0 && (
+                <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-2 py-0.5">
+                  Intent: {discoverySignals.categories.join(', ')}
+                </span>
+              )}
+              {discoverySignals.noMajorRestriction && (
+                <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-emerald-300">
+                  No major restriction
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Category Pills Slider / Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         <button

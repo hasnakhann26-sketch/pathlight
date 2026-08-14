@@ -14,6 +14,8 @@ import { SOURCE_REGISTRY } from '../data/sourceRegistry';
 import { calculateMatchScore } from '../engine/matchingEngine';
 import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
+import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
+import { GrantsGovConnector, ConnectorFetchResult } from '../engine/connectors';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -45,6 +47,10 @@ interface AppContextType {
   isJsonImportOpen: boolean;
   setIsJsonImportOpen: (open: boolean) => void;
 
+  // Current View
+  currentView: 'landing' | 'explore' | 'saved';
+  setCurrentView: (view: 'landing' | 'explore' | 'saved') => void;
+
   // Filters & Search
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
@@ -54,6 +60,12 @@ interface AppContextType {
 
   // Goal Discovery
   goalSuggestions: GoalDiscoverySuggestion[];
+
+  // Natural-language discovery
+  discoveryInput: string;
+  discoverySignals: DiscoverySignals | null;
+  applyDiscoveryIntent: (prompt: string) => DiscoverySignals;
+  clearDiscoveryIntent: () => void;
 
   // Source Registry
   sourceRegistry: SourceRegistryEntry[];
@@ -75,6 +87,12 @@ interface AppContextType {
   // View Mode
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
+
+  // Connector Management
+  fetchFromConnectors: () => Promise<void>;
+  connectorStatuses: Record<string, { status: string; message: string; recordCount: number }>;
+  isConnectorFetching: boolean;
+  lastConnectorSync: string | null;
 }
 
 const STORAGE_KEYS = {
@@ -154,19 +172,65 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return deduplicateOpportunities(DEMO_OPPORTUNITIES);
   });
 
-  // 4. UI Modals
+  // 4. UI Modals & Views
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSourceRegistryOpen, setIsSourceRegistryOpen] = useState(false);
   const [isJsonImportOpen, setIsJsonImportOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<'landing' | 'explore' | 'saved'>('landing');
 
   // 5. Filters
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [discoveryInput, setDiscoveryInput] = useState('');
+  const [discoverySignals, setDiscoverySignals] = useState<DiscoverySignals | null>(null);
+  const discoveryProvider = useMemo(() => createDiscoveryProvider(), []);
 
   // 6. View Mode (Grid vs List)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Helper actions
+  // 7. Connector Management
+  const [isConnectorFetching, setIsConnectorFetching] = useState(false);
+  const [lastConnectorSync, setLastConnectorSync] = useState<string | null>(null);
+  const [connectorStatuses, setConnectorStatuses] = useState<Record<string, { status: string; message: string; recordCount: number }>>({});
+
+  // Fetch from live connectors
+  const fetchFromConnectors = async () => {
+    if (isConnectorFetching) return;
+
+    setIsConnectorFetching(true);
+    const statuses: Record<string, { status: string; message: string; recordCount: number }> = {};
+
+    try {
+      // Fetch from Grants.gov
+      const grantsConnector = new GrantsGovConnector();
+      const grantsResult = await grantsConnector.fetch({ limit: 50 });
+
+      statuses['grants_gov'] = {
+        status: grantsResult.sourceStatus,
+        message: grantsResult.message,
+        recordCount: grantsResult.fetchedCount,
+      };
+
+      // Add fetched records to opportunities
+      if (grantsResult.success && grantsResult.records.length > 0) {
+        setOpportunities((prev) => {
+          const combined = deduplicateOpportunities([...prev, ...grantsResult.records]);
+          return combined;
+        });
+      }
+    } catch (error) {
+      console.warn('Connector fetch error:', error);
+      statuses['grants_gov'] = {
+        status: 'ERROR',
+        message: `Connector error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        recordCount: 0,
+      };
+    } finally {
+      setConnectorStatuses(statuses);
+      setLastConnectorSync(new Date().toISOString());
+      setIsConnectorFetching(false);
+    }
+  };
   const toggleSaveOpportunity = (canonicalId: string) => {
     setSavedOpportunityIds((prev) =>
       prev.includes(canonicalId)
@@ -195,6 +259,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetFilters = () => {
     setFilters(INITIAL_FILTERS);
+    setDiscoveryInput('');
+    setDiscoverySignals(null);
+  };
+
+  const applyDiscoveryIntent = (prompt: string) => {
+    const safePrompt = prompt.trim();
+    if (!safePrompt) {
+      setDiscoveryInput('');
+      setDiscoverySignals(null);
+      return {
+        fundingTypes: [],
+        categories: [],
+        searchTerms: [],
+        worldwideOnly: false,
+        freeApplicationOnly: false,
+        noMajorRestriction: false,
+        preferredCountries: [],
+        summary: 'Pathlight is ready to understand a new opportunity brief.',
+        hardEligibilityGuard: false,
+      };
+    }
+
+    const signals = discoveryProvider.interpret(safePrompt);
+    setDiscoveryInput(safePrompt);
+    setDiscoverySignals(signals);
+
+    setFilters((prev) => {
+      const mergedSearchTerms = Array.from(new Set([prev.searchQuery.trim(), ...signals.searchTerms].filter(Boolean))).join(' ');
+      const mergedFundingTypes = Array.from(new Set([...prev.fundingTypes, ...signals.fundingTypes]));
+      const mergedCategories = Array.from(new Set([...prev.selectedCategories, ...signals.categories]));
+      const mergedCountry = prev.country || (signals.preferredCountries[0] ?? '');
+
+      return {
+        ...prev,
+        searchQuery: mergedSearchTerms,
+        selectedCategories: mergedCategories,
+        fundingTypes: mergedFundingTypes,
+        worldwideOnly: prev.worldwideOnly || signals.worldwideOnly,
+        freeApplicationOnly: prev.freeApplicationOnly || signals.freeApplicationOnly,
+        country: mergedCountry,
+      };
+    });
+
+    return signals;
+  };
+
+  const clearDiscoveryIntent = () => {
+    setDiscoveryInput('');
+    setDiscoverySignals(null);
   };
 
   const setQuickCategory = (cat: Category | 'All') => {
@@ -478,12 +591,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsSourceRegistryOpen,
         isJsonImportOpen,
         setIsJsonImportOpen,
+        currentView,
+        setCurrentView,
         filters,
         setFilters,
         updateFilter,
         resetFilters,
         setQuickCategory,
         goalSuggestions,
+        discoveryInput,
+        discoverySignals,
+        applyDiscoveryIntent,
+        clearDiscoveryIntent,
         sourceRegistry: SOURCE_REGISTRY,
         importJsonOpportunities,
         exportJsonDataset,
@@ -491,6 +610,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         stats,
         viewMode,
         setViewMode,
+        fetchFromConnectors,
+        connectorStatuses,
+        isConnectorFetching,
+        lastConnectorSync,
       }}
     >
       {children}

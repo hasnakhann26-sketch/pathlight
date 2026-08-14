@@ -32,6 +32,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
     updateFilter,
     savedOpportunityIds,
     stats,
+    setCurrentView,
   } = useApp();
 
   const handleToggleFunding = () => {
@@ -188,7 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
             className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 text-slate-400 hover:text-slate-200 rounded-lg transition-colors text-left"
           >
             <div className="flex items-center space-x-3 ml-4">
-              <span className="text-sm">Connectors</span>
+              <span className="text-sm">Trusted Sources</span>
             </div>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">
               6 Active
@@ -204,7 +205,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
             className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 text-slate-400 hover:text-slate-200 rounded-lg transition-colors text-left"
           >
             <div className="flex items-center space-x-3 ml-4">
-              <span className="text-sm">Dataset JSON</span>
+              <span className="text-sm">Import Data</span>
             </div>
             <span className="text-[10px] text-slate-500">Manage</span>
           </button>
@@ -285,12 +286,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
           </div>
           <div className="overflow-hidden min-w-0 flex-1">
             <p className="text-sm font-semibold truncate text-white group-hover:text-violet-200">
-              {profile.field} Scholar
+              {profile.field}
             </p>
             <p className="text-[10px] text-slate-400 flex items-center gap-1">
               <span>{profile.country}</span>
               <span>•</span>
-              <span className="text-violet-400">Benchmark Active</span>
+              <span className="text-violet-400">Profile Active</span>
             </p>
           </div>
         </button>
