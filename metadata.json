@@ -1,0 +1,6 @@
+{
+  "name": "Pathlight",
+  "description": "Global personalized opportunity-discovery platform for people aged 15+ with deterministic eligibility, transparent matching, and goal-aware discovery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
