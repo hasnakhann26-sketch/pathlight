@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
           type="text"
           value={filters.searchQuery}
           onChange={(e) => updateFilter('searchQuery', e.target.value)}
-          placeholder="Search global opportunities (e.g. Psychology research, DAAD, CERN, fully funded)..."
+          placeholder="Search opportunities (e.g. scholarships, DAAD, CERN, fully funded)..."
           className="bg-transparent border-none focus:ring-0 text-sm w-full text-slate-200 placeholder:text-slate-500 outline-none"
         />
         {filters.searchQuery && (

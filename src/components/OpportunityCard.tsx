@@ -114,6 +114,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
           </div>
 
           <button
+            aria-label={saved ? 'Remove bookmark' : 'Save bookmark'}
             onClick={(e) => {
               e.stopPropagation();
               toggleSaveOpportunity(opportunity.canonicalOpportunityId);
@@ -170,10 +171,13 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
           <span className="text-xl">{icon}</span>
         </div>
 
-        <div className="flex items-center gap-1.5 mb-1">
+        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
           <span className="text-xs text-slate-400">{opportunity.organization}</span>
           {opportunity.verificationStatus === 'verified' && (
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" title="Verified source" />
+            <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/20 bg-emerald-950/40 px-1.5 py-0.5 text-[10px] font-medium text-emerald-300">
+              <ShieldCheck className="w-3 h-3" />
+              Verified
+            </span>
           )}
         </div>
 
@@ -237,6 +241,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
         </div>
 
         <button
+          aria-label={`View details for ${opportunity.title}`}
           onClick={(e) => {
             e.stopPropagation();
             setSelectedOpportunity(opportunity);
@@ -244,7 +249,7 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({
           className="text-xs font-bold text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
         >
           <span>View Details</span>
-          <span>→</span>
+          <span aria-hidden="true">→</span>
         </button>
       </div>
     </div>
