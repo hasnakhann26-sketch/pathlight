@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import { Landing } from './components/Landing';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { StatsBar } from './components/StatsBar';
@@ -25,25 +24,12 @@ const MainView: React.FC = () => {
     resetFilters,
     profile,
     viewMode,
-    currentView,
     setIsProfileOpen,
     setIsSourceRegistryOpen,
     setIsJsonImportOpen,
   } = useApp();
 
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-  // Show landing page first
-  if (currentView === 'landing') {
-    return (
-      <div className="flex h-screen w-full bg-[#050308] text-slate-200 font-sans overflow-hidden selection:bg-violet-600 selection:text-white">
-        {/* Background Decorative Glows */}
-        <div className="fixed top-0 left-1/4 w-96 h-96 bg-violet-900/10 rounded-full blur-3xl pointer-events-none -z-10" />
-        <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-900/10 rounded-full blur-3xl pointer-events-none -z-10" />
-        <Landing />
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-screen w-full bg-[#050308] text-slate-200 font-sans overflow-hidden selection:bg-violet-600 selection:text-white">
@@ -64,15 +50,12 @@ const MainView: React.FC = () => {
           {/* Live Profile Signals Strip */}
           <StatsBar />
 
-          <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+          <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+            {/* Goal-Aware Discovery Banner */}
+            <GoalAwareBanner />
+
             {/* Search & Filter Controls */}
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-white">Explore Opportunities</h2>
-                <p className="text-sm text-slate-400">Discover what's relevant to you — and what you didn't know to search for.</p>
-              </div>
-              <FilterBar />
-            </div>
+            <FilterBar />
 
             {/* Results Context Strip */}
             <div className="flex items-center justify-between gap-4 text-xs text-slate-400">
@@ -92,8 +75,8 @@ const MainView: React.FC = () => {
                 )}
               </div>
 
-              <div className="text-slate-500 hidden sm:block text-xs">
-                Ranked for {profile.field} ({profile.educationLevel}, Year {profile.year})
+              <div className="text-slate-500 hidden sm:block">
+                Ranked deterministically for {profile.field} ({profile.educationLevel}, Year {profile.year})
               </div>
             </div>
 
@@ -123,7 +106,7 @@ const MainView: React.FC = () => {
                 <div className="space-y-1">
                   <h3 className="text-lg font-bold text-white">No matching opportunities found</h3>
                   <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                    Your current filters are narrowing the list too far. Try clearing one constraint, widening the funding or modality filters, or describing a broader goal in the discovery prompt.
+                    No opportunities met all your current filter criteria. Try clearing some filters or loosening your eligibility constraints.
                   </p>
                 </div>
                 <button
@@ -145,10 +128,10 @@ const MainView: React.FC = () => {
                   <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-md shadow-violet-600/30">
                     <Compass className="w-4 h-4" />
                   </div>
-                  <span className="font-bold text-slate-200">Pathlight</span>
+                  <span className="font-bold text-slate-200">Pathlight Discovery Platform</span>
                   <span className="text-slate-700">•</span>
                   <span className="text-[11px] text-slate-500">
-                    Opportunity discovery for students and early-career professionals
+                    Ages 15+ Personalized Opportunity Engine
                   </span>
                 </div>
 
@@ -157,30 +140,30 @@ const MainView: React.FC = () => {
                     onClick={() => setIsSourceRegistryOpen(true)}
                     className="text-slate-400 hover:text-violet-300 transition-colors"
                   >
-                    Trusted Sources
+                    Connector Registry
                   </button>
                   <button
                     onClick={() => setIsJsonImportOpen(true)}
                     className="text-slate-400 hover:text-violet-300 transition-colors"
                   >
-                    Import Data
+                    JSON Importer
                   </button>
                   <button
                     onClick={() => setIsProfileOpen(true)}
                     className="text-slate-400 hover:text-violet-300 transition-colors"
                   >
-                    My Profile
+                    Active Profile
                   </button>
                 </div>
               </div>
 
               <div className="mt-4 pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
                 <p>
-                  Pathlight indexes and verifies official sources before surfacing matches; you apply directly on the host portal.
+                  Pathlight indexes and verifies official opportunity sources directly. All applications are submitted on host portals.
                 </p>
                 <div className="flex items-center gap-1 text-emerald-400/80">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Verified Opportunity Engine</span>
+                  <span>Deterministic Eligibility Engine</span>
                 </div>
               </div>
             </div>

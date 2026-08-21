@@ -52,7 +52,7 @@ export const SourceRegistryModal: React.FC = () => {
           <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
           <div className="text-slate-300 leading-relaxed">
             <strong className="text-white font-semibold">Our Ingestion Principle: </strong>
-            Pathlight maintains explicit source provenance, respects site access policies, routes users to official hosts, and never misrepresents scraper activity or source quality.
+            Pathlight maintains explicit source provenance. We respect <code className="text-violet-300 bg-[#050308] px-1 py-0.5 rounded">robots.txt</code>, do not perform unauthorized scraping, route users directly to official hosts, and never claim fictitious automated crawlers.
           </div>
         </div>
 

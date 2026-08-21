@@ -6,21 +6,21 @@ export const DEMO_PROFILE: UserProfile = {
   citizenship: 'Pakistan',
   educationLevel: 'Undergraduate',
   degree: 'BS',
-  field: 'Computer Science',
+  field: 'Psychology',
   year: 2,
-  interests: ['Research', 'AI', 'International Opportunities', 'Social Impact', 'Tech Innovation'],
-  skills: ['Programming', 'Academic Writing', 'Problem Solving', 'Communication', 'Public Speaking'],
-  experience: 'Undergraduate student with 1 year research experience and leadership involvement.',
+  interests: ['Research', 'AI', 'Cognitive Science', 'International Opportunities', 'Social Impact'],
+  skills: ['Statistical Analysis', 'Academic Writing', 'Python Basics', 'Qualitative Research', 'Public Speaking'],
+  experience: 'Undergraduate student with 1 year lab assistant experience and university society leadership.',
   budget: 0,
   desiredCountries: ['United States', 'United Kingdom', 'Germany', 'Canada', 'Worldwide'],
   modalityPreference: 'any',
   fundingRequirement: 'fully_funded_only',
-  goals: ['Study abroad', 'Conduct international research', 'Build academic portfolio', 'Secure graduate funding'],
+  goals: ['Study abroad', 'Conduct cross-cultural research', 'Build academic CV', 'Secure graduate funding'],
 };
 
 export const ALTERNATIVE_DEMO_PROFILES: { label: string; profile: UserProfile }[] = [
   {
-    label: 'CS Undergraduate Year 2 (Pakistan, Budget $0)',
+    label: 'BS Psychology Year 2 (Pakistan, Budget $0)',
     profile: DEMO_PROFILE,
   },
   {

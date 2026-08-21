@@ -20,11 +20,13 @@ export const GoalAwareBanner: React.FC = () => {
           </span>
 
           <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 tracking-tight">
-            Discover beyond what you searched for
+            You didn't know these existed
           </h2>
 
           <p className="text-sm text-slate-400 leading-relaxed">
-            Pathlight matches opportunities to your goals, not just your search query. You're looking at scholarships, fellowships, research, internships, and more — all aligned with your actual aspirations.
+            Pathlight identifies cross-discipline opportunities for{' '}
+            <span className="text-violet-300 font-semibold">{profile.field}</span>{' '}
+            scholars that don't appear in traditional scholarship directories.
           </p>
         </div>
 
