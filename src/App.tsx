@@ -1,177 +1,130 @@
 import React, { useState } from 'react';
+import { Download, RefreshCw, Search, SlidersHorizontal, Sparkles } from 'lucide-react';
 import { AppProvider, useApp } from './context/AppContext';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
-import { StatsBar } from './components/StatsBar';
 import { FilterBar } from './components/FilterBar';
-import { GoalAwareBanner } from './components/GoalAwareBanner';
 import { OpportunityCard } from './components/OpportunityCard';
 import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { ProfileModal } from './components/ProfileModal';
 import { SourceRegistryModal } from './components/SourceRegistryModal';
 import { JsonImportModal } from './components/JsonImportModal';
-import {
-  Compass,
-  Search,
-  RotateCcw,
-  ShieldCheck,
-} from 'lucide-react';
 
 const MainView: React.FC = () => {
   const {
     filteredOpportunities,
-    filters,
-    resetFilters,
+    scoredOpportunities,
+    applications,
+    activeView,
     profile,
-    viewMode,
     setIsProfileOpen,
-    setIsSourceRegistryOpen,
-    setIsJsonImportOpen,
+    filters,
+    updateFilter,
+    aggregator,
   } = useApp();
-
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  const applicationOpportunities = scoredOpportunities.filter(({ opportunity }) => applications[opportunity.canonicalOpportunityId]);
+  const displayedOpportunities = activeView === 'applications' ? applicationOpportunities : filteredOpportunities;
+  const now = Date.now();
+  const withinDays = (date?: string, days = 7) => date ? new Date(date).getTime() >= now && new Date(date).getTime() <= now + days * 86400000 : false;
+  const sections = activeView === 'opportunities' ? [
+    { title: 'Closing This Week', items: filteredOpportunities.filter(({ opportunity }) => withinDays(opportunity.deadline, 7)), accent: 'text-red-600' },
+    { title: 'Closing This Month', items: filteredOpportunities.filter(({ opportunity }) => withinDays(opportunity.deadline, 30)), accent: 'text-gray-900' },
+    { title: 'New This Week', items: filteredOpportunities.filter(({ opportunity }) => withinDays(opportunity.lastVerified, 7)), accent: 'text-gray-900' },
+    { title: 'Fellowships', items: filteredOpportunities.filter(({ opportunity }) => opportunity.category.toLowerCase().includes('fellowship')), accent: 'text-gray-900' },
+    { title: 'Fully Funded Travel', items: filteredOpportunities.filter(({ opportunity }) => opportunity.funding === 'fully_funded' && /travel|exchange|conference|summit/i.test(`${opportunity.category} ${opportunity.title}`)), accent: 'text-gray-900' },
+    { title: 'Essays and Writing', items: filteredOpportunities.filter(({ opportunity }) => opportunity.category === 'Essay / Writing'), accent: 'text-gray-900' },
+    { title: 'MUN Conferences', items: filteredOpportunities.filter(({ opportunity }) => opportunity.category === 'MUN'), accent: 'text-gray-900' },
+    { title: 'Competitions and Hackathons', items: filteredOpportunities.filter(({ opportunity }) => opportunity.category === 'Competition / Hackathon'), accent: 'text-gray-900' },
+  ].filter((section) => section.items.length > 0) : [];
+
+  const exportApplicationsCsv = () => {
+    const rows = [['Title', 'Source', 'Status', 'Applied At', 'Deadline', 'Notes']];
+    applicationOpportunities.forEach(({ opportunity }) => {
+      const record = applications[opportunity.canonicalOpportunityId];
+      rows.push([opportunity.title, opportunity.sources[0]?.sourceName || opportunity.organization, record.status, record.appliedAt, opportunity.deadline || '', record.notes || '']);
+    });
+    const csv = rows.map((row) => row.map((value) => `"${value.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pathlight-applications-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="flex h-screen w-full bg-[#050308] text-slate-200 font-sans overflow-hidden selection:bg-violet-600 selection:text-white">
-      {/* Background Decorative Glows */}
-      <div className="fixed top-0 left-1/4 w-96 h-96 bg-violet-900/10 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="fixed bottom-10 right-1/4 w-96 h-96 bg-purple-900/10 rounded-full blur-3xl pointer-events-none -z-10" />
-
-      {/* Sidebar Navigation */}
+    <div className="flex min-h-screen w-full bg-[#f8f9fa] text-gray-900">
       <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header */}
+      <div className="flex min-w-0 flex-1 flex-col">
         <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
-
-        {/* Scrollable Dashboard Body */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          {/* Live Profile Signals Strip */}
-          <StatsBar />
-
-          <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-            {/* Goal-Aware Discovery Banner */}
-            <GoalAwareBanner />
-
-            {/* Search & Filter Controls */}
-            <FilterBar />
-
-            {/* Results Context Strip */}
-            <div className="flex items-center justify-between gap-4 text-xs text-slate-400">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-white">
-                  {filteredOpportunities.length} {filteredOpportunities.length === 1 ? 'Opportunity' : 'Opportunities'} Found
-                </span>
-                {filters.eligibleOnly && (
-                  <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-300 border border-emerald-500/30 font-medium">
-                    Showing Eligible Only
-                  </span>
-                )}
-                {filters.savedOnly && (
-                  <span className="px-2 py-0.5 rounded-md bg-violet-950/80 text-violet-300 border border-violet-500/30 font-medium">
-                    Showing Saved Bookmarks
-                  </span>
-                )}
-              </div>
-
-              <div className="text-slate-500 hidden sm:block">
-                Ranked deterministically for {profile.field} ({profile.educationLevel}, Year {profile.year})
-              </div>
+        <main className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-7 sm:px-8 lg:px-10">
+          <div className="mb-7 flex flex-col justify-between gap-4 border-b pb-6 md:flex-row md:items-end">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#166534]">{activeView === 'applications' ? 'Your progress' : 'Explore opportunities'}</p>
+              <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">{activeView === 'applications' ? 'My Applications' : 'Find what comes next'}</h1>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-600">{activeView === 'applications' ? 'Keep track of the opportunities you are pursuing and update their status as you go.' : 'Discover scholarships, fellowships, internships, and global programs matched to your goals.'}</p>
             </div>
-
-            {/* Opportunities List or Grid */}
-            {filteredOpportunities.length > 0 ? (
-              <div
-                className={
-                  viewMode === 'grid'
-                    ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5'
-                    : 'flex flex-col gap-4'
-                }
-              >
-                {filteredOpportunities.map(({ opportunity, matchResult }) => (
-                  <OpportunityCard
-                    key={opportunity.canonicalOpportunityId}
-                    opportunity={opportunity}
-                    matchResult={matchResult}
-                  />
-                ))}
-              </div>
-            ) : (
-              /* Empty Filter State */
-              <div className="p-12 text-center rounded-3xl bg-[#0a0514] border border-violet-500/10 my-8 space-y-4">
-                <div className="inline-flex p-4 rounded-2xl bg-slate-900 text-slate-400 border border-white/5">
-                  <Search className="w-8 h-8" />
-                </div>
-                <div className="space-y-1">
-                  <h3 className="text-lg font-bold text-white">No matching opportunities found</h3>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
-                    No opportunities met all your current filter criteria. Try clearing some filters or loosening your eligibility constraints.
-                  </p>
-                </div>
-                <button
-                  onClick={resetFilters}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-semibold text-xs transition-colors shadow-lg shadow-violet-600/30"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Reset All Filters</span>
+              <div className="flex items-center gap-2 self-start md:self-auto">
+                <button onClick={() => aggregator.refresh()} disabled={aggregator.isLoading} className="flex items-center gap-2 rounded border bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:border-[#15803d] hover:text-[#166534] disabled:opacity-60"><RefreshCw className={`h-3.5 w-3.5 ${aggregator.isLoading ? 'animate-spin' : ''}`} />{aggregator.isLoading ? 'Updating…' : 'Refresh sources'}</button>
+                <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-2 rounded border bg-white px-3 py-2 text-xs font-medium text-gray-600 hover:border-[#15803d] hover:text-[#166534]">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100 text-[11px] font-semibold text-[#166534]">{profile.field.charAt(0)}</span>
+              Update profile
                 </button>
               </div>
-            )}
-          </main>
+          </div>
 
-          {/* Footer */}
-          <footer className="mt-16 border-t border-violet-900/20 bg-[#050308] py-8 text-xs text-slate-400">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-violet-600 flex items-center justify-center text-white shadow-md shadow-violet-600/30">
-                    <Compass className="w-4 h-4" />
-                  </div>
-                  <span className="font-bold text-slate-200">Pathlight Discovery Platform</span>
-                  <span className="text-slate-700">•</span>
-                  <span className="text-[11px] text-slate-500">
-                    Ages 15+ Personalized Opportunity Engine
-                  </span>
+          {activeView === 'opportunities' && (
+            <>
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-md border border-green-100 bg-green-50/60 px-4 py-3 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#16a34a]" />
+                <span>Showing opportunities ranked for <strong className="font-semibold text-gray-900">{profile.field}</strong> students.</span>
                 </div>
-
-                <div className="flex items-center gap-4 text-xs">
-                  <button
-                    onClick={() => setIsSourceRegistryOpen(true)}
-                    className="text-slate-400 hover:text-violet-300 transition-colors"
-                  >
-                    Connector Registry
-                  </button>
-                  <button
-                    onClick={() => setIsJsonImportOpen(true)}
-                    className="text-slate-400 hover:text-violet-300 transition-colors"
-                  >
-                    JSON Importer
-                  </button>
-                  <button
-                    onClick={() => setIsProfileOpen(true)}
-                    className="text-slate-400 hover:text-violet-300 transition-colors"
-                  >
-                    Active Profile
-                  </button>
-                </div>
+                <span className="text-xs text-gray-500">{aggregator.sourceCount ? `${aggregator.sourceCount} live records` : 'Demo records active'}{aggregator.lastUpdated ? ` · Updated ${new Date(aggregator.lastUpdated).toLocaleString()}` : ''}{aggregator.sourceStatuses.length > 0 ? ` · ${aggregator.sourceStatuses.filter((source) => source.ok).length}/${aggregator.sourceStatuses.length} sources online` : ''}</span>
               </div>
-
-              <div className="mt-4 pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500">
-                <p>
-                  Pathlight indexes and verifies official opportunity sources directly. All applications are submitted on host portals.
-                </p>
-                <div className="flex items-center gap-1 text-emerald-400/80">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  <span>Deterministic Eligibility Engine</span>
-                </div>
+              <div className="mb-6 md:hidden">
+                <label className="flex items-center gap-2 rounded-md border bg-white px-3 py-2.5 text-sm text-gray-500"><Search className="h-4 w-4" /><input value={filters.searchQuery} onChange={(e) => updateFilter('searchQuery', e.target.value)} placeholder="Search opportunities" className="w-full outline-none" /></label>
               </div>
+              <FilterBar />
+            </>
+          )}
+
+          {activeView === 'opportunities' && sections.length > 0 && (
+            <div className="mt-8 space-y-8">
+              {sections.map((section) => (
+                <section key={section.title}>
+                  <div className="mb-3 flex items-center justify-between"><h2 className={`text-lg font-semibold ${section.accent}`}>{section.title}{section.title === 'Closing This Week' && <span className="ml-2 rounded-full bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-600">Urgent</span>}</h2><span className="text-xs text-gray-500">{section.items.length} found</span></div>
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">{section.items.slice(0, 3).map(({ opportunity, matchResult }) => <OpportunityCard key={`${section.title}-${opportunity.canonicalOpportunityId}`} opportunity={opportunity} matchResult={matchResult} />)}</div>
+                </section>
+              ))}
             </div>
-          </footer>
-        </div>
-      </div>
+          )}
 
-      {/* Global Modals */}
+          <div className="mb-4 mt-10 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">{activeView === 'applications' ? `${applicationOpportunities.length} tracked ${applicationOpportunities.length === 1 ? 'application' : 'applications'}` : `${filteredOpportunities.length} opportunities`}</h2>
+              <p className="mt-1 text-xs text-gray-500">{activeView === 'applications' ? 'Statuses are saved automatically on this device.' : 'Official sources, clear deadlines, and transparent eligibility.'}</p>
+            </div>
+            {activeView === 'applications' ? <button onClick={exportApplicationsCsv} className="flex items-center gap-1.5 rounded border bg-white px-3 py-2 text-xs font-semibold text-gray-700 hover:border-[#15803d] hover:text-[#166534]"><Download className="h-3.5 w-3.5" />Export CSV</button> : <SlidersHorizontal className="h-4 w-4 text-gray-400" />}
+          </div>
+
+          {displayedOpportunities.length > 0 ? (
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {displayedOpportunities.map(({ opportunity, matchResult }) => <OpportunityCard key={opportunity.canonicalOpportunityId} opportunity={opportunity} matchResult={matchResult} applicationView={activeView === 'applications'} />)}
+            </div>
+          ) : (
+            <div className="py-16 text-center">
+              <h3 className="text-base font-semibold text-gray-900">{activeView === 'applications' ? 'No applications yet' : 'No opportunities match these filters'}</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm text-gray-600">{activeView === 'applications' ? 'Click Apply on an opportunity to start building your application list.' : 'Try adjusting your search or clearing one of your filters.'}</p>
+            </div>
+          )}
+        </main>
+        <footer className="border-t bg-white px-4 py-5 text-center text-xs text-gray-500 sm:px-8">
+          Pathlight indexes official opportunity sources directly. Applications are completed on each host portal.
+        </footer>
+      </div>
       <OpportunityDetailModal />
       <ProfileModal />
       <SourceRegistryModal />
@@ -181,10 +134,5 @@ const MainView: React.FC = () => {
 };
 
 export default function App() {
-  return (
-    <AppProvider>
-      <MainView />
-    </AppProvider>
-  );
+  return <AppProvider><MainView /></AppProvider>;
 }
-

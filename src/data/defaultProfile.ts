@@ -1,7 +1,9 @@
 import { UserProfile } from '../types';
 
 export const DEMO_PROFILE: UserProfile = {
+  name: '',
   age: 20,
+  ageGroup: '18-20',
   country: 'Pakistan',
   citizenship: 'Pakistan',
   educationLevel: 'Undergraduate',
@@ -26,7 +28,9 @@ export const ALTERNATIVE_DEMO_PROFILES: { label: string; profile: UserProfile }[
   {
     label: 'CS Graduate Student (India, AI/ML Focus)',
     profile: {
+      name: '',
       age: 23,
+      ageGroup: '21-25',
       country: 'India',
       citizenship: 'India',
       educationLevel: 'Graduate',
@@ -46,7 +50,9 @@ export const ALTERNATIVE_DEMO_PROFILES: { label: string; profile: UserProfile }[
   {
     label: 'High School Senior (Kenya, Climate & Leadership)',
     profile: {
+      name: '',
       age: 17,
+      ageGroup: '15-17',
       country: 'Kenya',
       citizenship: 'Kenya',
       educationLevel: 'High School',

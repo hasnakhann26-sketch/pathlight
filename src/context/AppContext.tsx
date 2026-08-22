@@ -7,6 +7,8 @@ import {
   Category,
   SourceRegistryEntry,
   GoalDiscoverySuggestion,
+  ApplicationStatus,
+  ApplicationRecord,
 } from '../types';
 import { DEMO_OPPORTUNITIES } from '../data/demoOpportunities';
 import { DEMO_PROFILE } from '../data/defaultProfile';
@@ -14,6 +16,7 @@ import { SOURCE_REGISTRY } from '../data/sourceRegistry';
 import { calculateMatchScore } from '../engine/matchingEngine';
 import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
+import { fetchAggregatedOpportunities, getCachedAggregatedOpportunities, isOpportunityForProfile, AggregatorSourceStatus } from '../aggregator/aggregator';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -28,6 +31,11 @@ interface AppContextType {
   savedOpportunityIds: string[];
   toggleSaveOpportunity: (canonicalId: string) => void;
   isSaved: (canonicalId: string) => boolean;
+  applications: Record<string, ApplicationRecord>;
+  applyToOpportunity: (canonicalId: string) => void;
+  updateApplicationStatus: (canonicalId: string, status: ApplicationStatus) => void;
+  updateApplicationNotes: (canonicalId: string, notes: string) => void;
+  isApplied: (canonicalId: string) => boolean;
 
   // Profile
   profile: UserProfile;
@@ -75,12 +83,24 @@ interface AppContextType {
   // View Mode
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
+  activeView: 'opportunities' | 'applications';
+  setActiveView: (view: 'opportunities' | 'applications') => void;
+  aggregator: {
+    isLoading: boolean;
+    lastUpdated: string | null;
+    sourceCount: number;
+    sourceStatuses: AggregatorSourceStatus[];
+    refresh: () => Promise<void>;
+  };
 }
 
 const STORAGE_KEYS = {
   PROFILE: 'pathlight_user_profile_v1',
   SAVED: 'pathlight_saved_opportunities_v1',
+  APPLICATIONS: 'pathlight_applications_v1',
   CUSTOM_OPPS: 'pathlight_custom_opportunities_v1',
+  AGGREGATED: 'pathlight_aggregated_opportunities_v1',
+  AGGREGATED_UPDATED: 'pathlight_aggregated_updated_v1',
 };
 
 const INITIAL_FILTERS: FilterState = {
@@ -94,6 +114,7 @@ const INITIAL_FILTERS: FilterState = {
   deadlineFilter: 'all',
   eligibleOnly: false,
   savedOnly: false,
+  source: '',
   sortBy: 'best_match',
 };
 
@@ -130,6 +151,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return ['opp_ugrad_exchange_2026']; // Default saved demo item
   });
 
+  const [applications, setApplications] = useState<Record<string, ApplicationRecord>>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.APPLICATIONS);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to load applications', e);
+    }
+    return {};
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(applications));
+    } catch (e) {
+      console.warn('Failed to save applications', e);
+    }
+  }, [applications]);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.SAVED, JSON.stringify(savedOpportunityIds));
@@ -151,8 +190,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to load custom opportunities', e);
     }
-    return deduplicateOpportunities(DEMO_OPPORTUNITIES);
+    const cached = getCachedAggregatedOpportunities();
+    return deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...cached]);
   });
+
+  const [aggregatedOpportunities, setAggregatedOpportunities] = useState<Opportunity[]>(() => getCachedAggregatedOpportunities());
+  const [isAggregatorLoading, setIsAggregatorLoading] = useState(false);
+  const [aggregatorLastUpdated, setAggregatorLastUpdated] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.AGGREGATED_UPDATED);
+    } catch {
+      return null;
+    }
+  });
+  const [aggregatorSourceStatuses, setAggregatorSourceStatuses] = useState<AggregatorSourceStatus[]>([]);
 
   // 4. UI Modals
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
@@ -165,6 +216,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 6. View Mode (Grid vs List)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [activeView, setActiveView] = useState<'opportunities' | 'applications'>('opportunities');
+
+  const refreshAggregator = async () => {
+    setIsAggregatorLoading(true);
+    try {
+      const result = await fetchAggregatedOpportunities();
+      setAggregatorSourceStatuses(result.sourceStatuses);
+      if (result.opportunities.length > 0) {
+        setAggregatedOpportunities(result.opportunities);
+        setOpportunities((prev) => deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...result.opportunities]));
+        setAggregatorLastUpdated(result.updatedAt);
+        localStorage.setItem(STORAGE_KEYS.AGGREGATED_UPDATED, result.updatedAt);
+      }
+    } catch (error) {
+      console.warn('Opportunity sources could not be refreshed', error);
+    } finally {
+      setIsAggregatorLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshAggregator();
+  }, []);
 
   // Helper actions
   const toggleSaveOpportunity = (canonicalId: string) => {
@@ -176,6 +250,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const isSaved = (canonicalId: string) => savedOpportunityIds.includes(canonicalId);
+
+  const applyToOpportunity = (canonicalId: string) => {
+    setApplications((prev) => ({
+      ...prev,
+      [canonicalId]: prev[canonicalId] || { status: 'Applied', appliedAt: new Date().toISOString(), notes: '' },
+    }));
+  };
+
+  const updateApplicationStatus = (canonicalId: string, status: ApplicationStatus) => {
+    setApplications((prev) => ({ ...prev, [canonicalId]: { ...prev[canonicalId], status } }));
+  };
+
+  const updateApplicationNotes = (canonicalId: string, notes: string) => {
+    setApplications((prev) => ({ ...prev, [canonicalId]: { ...prev[canonicalId], notes } }));
+  };
+
+  const isApplied = (canonicalId: string) => Boolean(applications[canonicalId]);
 
   const updateProfile = (updates: Partial<UserProfile>) => {
     setProfile((prev) => ({ ...prev, ...updates }));
@@ -230,6 +321,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const skillsMatch = o.skills?.some((s) => s.toLowerCase().includes(q));
         return titleMatch || orgMatch || descMatch || catMatch || countryMatch || fieldsMatch || skillsMatch;
       });
+    }
+
+    // Automatic profile matching for live and imported records.
+    list = list.filter(({ opportunity: o }) => isOpportunityForProfile(o, profile));
+
+    if (filters.source) {
+      list = list.filter(({ opportunity: o }) => o.sources.some((source) => source.sourceName === filters.source));
     }
 
     // Category filter
@@ -466,6 +564,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         savedOpportunityIds,
         toggleSaveOpportunity,
         isSaved,
+        applications,
+        applyToOpportunity,
+        updateApplicationStatus,
+        isApplied,
+        updateApplicationNotes,
         profile,
         updateProfile,
         resetToDemoProfile,
@@ -491,6 +594,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         stats,
         viewMode,
         setViewMode,
+        activeView,
+        setActiveView,
+        aggregator: {
+          isLoading: isAggregatorLoading,
+          lastUpdated: aggregatorLastUpdated,
+          sourceCount: aggregatedOpportunities.length,
+          sourceStatuses: aggregatorSourceStatuses,
+          refresh: refreshAggregator,
+        },
       }}
     >
       {children}

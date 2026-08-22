@@ -1,39 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @layer base {
+  * {
+    border-color: #e5e7eb;
+  }
+
   body {
-    background-color: #050308;
-    color: #e2e8f0;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    antialiased: true;
+    margin: 0;
+    background: #f8f9fa;
+    color: #111827;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
-/* Custom Elegant Dark scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #050308;
+  background: #f8f9fa;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e1333;
-  border-radius: 9999px;
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: #d1d5db;
+  border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3b1d6b;
+  background: #9ca3af;
 }
 
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
+/* Keep the existing detail and data-management modals aligned with the light shell. */
+.fixed.inset-0.z-50 {
+  background-color: rgb(17 24 39 / 0.32) !important;
+  backdrop-filter: blur(4px);
+}
+
+.fixed.inset-0.z-50 > div {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+  box-shadow: 0 20px 50px rgb(17 24 39 / 0.18) !important;
+}
+
+.fixed.inset-0.z-50 [class*="bg-[#050308]"],
+.fixed.inset-0.z-50 [class*="bg-[#0a0514]"],
+.fixed.inset-0.z-50 [class*="bg-[#0f0a1d]"],
+.fixed.inset-0.z-50 [class*="bg-black/"] {
+  background: #f8f9fa !important;
+}
+
+.fixed.inset-0.z-50 [class*="text-white"] {
+  color: #111827 !important;
+}
+
+.fixed.inset-0.z-50 [class*="text-slate-200"],
+.fixed.inset-0.z-50 [class*="text-slate-300"] {
+  color: #374151 !important;
+}
+
+.fixed.inset-0.z-50 [class*="border-violet-"],
+.fixed.inset-0.z-50 [class*="border-white/"] {
+  border-color: #e5e7eb !important;
+}

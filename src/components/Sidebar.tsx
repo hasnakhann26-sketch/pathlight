@@ -1,21 +1,6 @@
 import React from 'react';
+import { Bookmark, Check, ChevronDown, Compass, Database, Filter, Globe2, SlidersHorizontal, Sparkles, UploadCloud, User, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import {
-  Compass,
-  Bookmark,
-  Database,
-  UploadCloud,
-  CheckCircle2,
-  DollarSign,
-  Globe,
-  Sliders,
-  User,
-  Sparkles,
-  ExternalLink,
-  ChevronRight,
-  Filter,
-} from 'lucide-react';
-import { Category } from '../types';
 
 interface SidebarProps {
   mobileOpen?: boolean;
@@ -32,269 +17,84 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
     updateFilter,
     savedOpportunityIds,
     stats,
+    applications,
+    activeView,
+    setActiveView,
   } = useApp();
 
-  const handleToggleFunding = () => {
-    if (filters.fundingTypes.includes('fully_funded')) {
-      updateFilter(
-        'fundingTypes',
-        filters.fundingTypes.filter((f) => f !== 'fully_funded')
-      );
-    } else {
-      updateFilter('fundingTypes', [...filters.fundingTypes, 'fully_funded']);
-    }
+  const toggleFunding = () => {
+    updateFilter('fundingTypes', filters.fundingTypes.includes('fully_funded') ? [] : ['fully_funded']);
   };
 
   return (
-    <aside
-      className={`${
-        mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-      } fixed lg:static inset-y-0 left-0 z-50 w-72 border-r border-violet-900/30 bg-[#0a0514] flex flex-col p-6 overflow-hidden transition-transform duration-200 ease-in-out shrink-0`}
-    >
-      {/* Brand Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center font-bold text-white shadow-md shadow-violet-600/30">
-            P
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-              <span>Pathlight</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-950 text-violet-300 font-mono border border-violet-800/40">
-                v2.0
-              </span>
-            </h1>
-          </div>
+    <>
+      {mobileOpen && <button className="fixed inset-0 z-40 bg-gray-900/20 lg:hidden" onClick={() => setMobileOpen?.(false)} aria-label="Close navigation" />}
+      <aside className={`${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r bg-white px-5 py-5 transition-transform duration-200 lg:static`}>
+        <div className="flex items-center justify-between border-b pb-5">
+          <button onClick={() => setActiveView('opportunities')} className="flex items-center gap-2.5 text-left">
+            <span className="flex h-9 w-9 items-center justify-center rounded bg-[#166534] text-lg font-bold text-white">P</span>
+            <span>
+              <span className="block text-lg font-semibold tracking-tight text-gray-900">Pathlight</span>
+              <span className="block text-[11px] text-gray-500">Find your next opportunity</span>
+            </span>
+          </button>
+          <button onClick={() => setMobileOpen?.(false)} className="rounded p-1 text-gray-500 hover:bg-gray-100 lg:hidden" aria-label="Close navigation"><X className="h-5 w-5" /></button>
         </div>
 
-        {setMobileOpen && (
-          <button
-            onClick={() => setMobileOpen(false)}
-            className="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-800/50"
-          >
-            ✕
-          </button>
-        )}
-      </div>
-
-      {/* Scrollable Navigation and Controls */}
-      <div className="flex-1 overflow-y-auto space-y-6 pr-1 -mr-1 scrollbar-none">
-        {/* Verified Profile Card */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] uppercase tracking-widest text-violet-400 font-semibold flex items-center gap-1">
-              <Sparkles className="w-3 h-3" />
-              <span>Verified Profile</span>
-            </h3>
-            <span className="text-[10px] text-emerald-400 font-medium">● Active</span>
-          </div>
-
-          <div className="space-y-2.5 bg-violet-950/20 p-4 rounded-xl border border-violet-500/10 text-xs">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Age</span>
-              <span className="font-medium text-slate-200">{profile.age} yrs</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Location</span>
-              <span className="font-medium text-slate-200 truncate max-w-[110px]" title={profile.country}>
-                {profile.country}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Field</span>
-              <span className="font-medium text-violet-300 truncate max-w-[110px]" title={profile.field}>
-                {profile.field}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Education</span>
-              <span className="font-medium text-slate-200">
-                {profile.degree || profile.educationLevel} (Yr {profile.year})
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-400">Budget</span>
-              <span className="font-medium text-emerald-400">
-                ${profile.budget} {profile.budget === 0 ? '(Need 100% aid)' : ''}
-              </span>
-            </div>
-
-            <button
-              onClick={() => {
-                setIsProfileOpen(true);
-                if (setMobileOpen) setMobileOpen(false);
-              }}
-              className="w-full mt-2 py-2 text-xs font-semibold bg-slate-800/90 hover:bg-slate-750 text-slate-200 hover:text-white rounded-lg transition-colors border border-slate-700 shadow-sm"
-            >
-              Edit Profile Details
+        <div className="flex-1 overflow-y-auto py-5">
+          <nav className="space-y-1">
+            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Workspace</p>
+            <button onClick={() => { setActiveView('opportunities'); updateFilter('savedOnly', false); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${activeView === 'opportunities' && !filters.savedOnly ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
+              <span className="flex items-center gap-3"><Compass className="h-4 w-4" />Discover opportunities</span>
+              <span className="text-xs text-gray-500">{stats.total}</span>
             </button>
-          </div>
-        </section>
+            <button onClick={() => { setActiveView('applications'); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${activeView === 'applications' ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
+              <span className="flex items-center gap-3"><Check className="h-4 w-4" />My Applications</span>
+              <span className="text-xs text-gray-500">{Object.keys(applications).length}</span>
+            </button>
+            <button onClick={() => { setActiveView('opportunities'); updateFilter('savedOnly', true); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${filters.savedOnly ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
+              <span className="flex items-center gap-3"><Bookmark className="h-4 w-4" />Saved opportunities</span>
+              <span className="text-xs text-gray-500">{savedOpportunityIds.length}</span>
+            </button>
+          </nav>
 
-        {/* Workspace Navigation */}
-        <nav className="space-y-1">
-          <h3 className="text-[10px] uppercase tracking-widest text-violet-400 font-semibold mb-3">
-            My Workspace
-          </h3>
-
-          {/* All Opportunities */}
-          <button
-            onClick={() => {
-              updateFilter('savedOnly', false);
-              if (setMobileOpen) setMobileOpen(false);
-            }}
-            className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-all ${
-              !filters.savedOnly
-                ? 'bg-violet-600/15 text-violet-300 border border-violet-500/20 font-medium'
-                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              {!filters.savedOnly && <div className="w-1 h-4 bg-violet-500 rounded-full" />}
-              <span className={`text-sm ${filters.savedOnly ? 'ml-4' : ''}`}>Opportunities</span>
+          <section className="mt-8">
+            <div className="mb-3 flex items-center gap-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500"><Filter className="h-3.5 w-3.5" />Filters</div>
+            <div className="space-y-3 rounded-md border bg-[#f8f9fa] p-3">
+              <label className="flex cursor-pointer items-center justify-between gap-3 text-sm text-gray-700">
+                <span>Eligible for me</span><input type="checkbox" checked={filters.eligibleOnly} onChange={(e) => updateFilter('eligibleOnly', e.target.checked)} className="h-4 w-4 accent-[#16a34a]" />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3 text-sm text-gray-700">
+                <span>Fully funded</span><input type="checkbox" checked={filters.fundingTypes.includes('fully_funded')} onChange={toggleFunding} className="h-4 w-4 accent-[#16a34a]" />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3 text-sm text-gray-700">
+                <span>Worldwide / online</span><input type="checkbox" checked={filters.worldwideOnly} onChange={(e) => updateFilter('worldwideOnly', e.target.checked)} className="h-4 w-4 accent-[#16a34a]" />
+              </label>
+              <label className="flex cursor-pointer items-center justify-between gap-3 text-sm text-gray-700">
+                <span>Free application</span><input type="checkbox" checked={filters.freeApplicationOnly} onChange={(e) => updateFilter('freeApplicationOnly', e.target.checked)} className="h-4 w-4 accent-[#16a34a]" />
+              </label>
+              <label className="block text-sm text-gray-700">
+                <span className="mb-1.5 block">Deadline</span>
+                <select value={filters.deadlineFilter} onChange={(e) => updateFilter('deadlineFilter', e.target.value as any)} className="w-full rounded border bg-white px-2 py-1.5 text-xs text-gray-700 outline-none focus:border-[#15803d]">
+                  <option value="all">Any deadline</option><option value="closing_soon">Closing within 7 days</option><option value="closing_this_month">Closing this month</option><option value="no_deadline">Rolling / no deadline</option>
+                </select>
+              </label>
             </div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-black/40 text-slate-400 font-mono">
-              {stats.total}
-            </span>
-          </button>
+          </section>
 
-          {/* Saved List */}
-          <button
-            onClick={() => {
-              updateFilter('savedOnly', true);
-              if (setMobileOpen) setMobileOpen(false);
-            }}
-            className={`w-full flex items-center justify-between p-2.5 rounded-lg text-left transition-all ${
-              filters.savedOnly
-                ? 'bg-violet-600/15 text-violet-300 border border-violet-500/20 font-medium'
-                : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-            }`}
-          >
-            <div className="flex items-center space-x-3">
-              {filters.savedOnly && <div className="w-1 h-4 bg-violet-500 rounded-full" />}
-              <span className={`text-sm ${!filters.savedOnly ? 'ml-4' : ''}`}>Saved List</span>
-            </div>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-violet-950 text-violet-300 font-mono font-bold">
-              {savedOpportunityIds.length}
-            </span>
-          </button>
+          <section className="mt-8">
+            <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Manage data</p>
+            <button onClick={() => setIsSourceRegistryOpen(true)} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"><Database className="h-4 w-4" />Connector registry</button>
+            <button onClick={() => setIsJsonImportOpen(true)} className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"><UploadCloud className="h-4 w-4" />Import dataset</button>
+          </section>
+        </div>
 
-          {/* Connectors Registry */}
-          <button
-            onClick={() => {
-              setIsSourceRegistryOpen(true);
-              if (setMobileOpen) setMobileOpen(false);
-            }}
-            className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 text-slate-400 hover:text-slate-200 rounded-lg transition-colors text-left"
-          >
-            <div className="flex items-center space-x-3 ml-4">
-              <span className="text-sm">Connectors</span>
-            </div>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">
-              6 Active
-            </span>
-          </button>
-
-          {/* Dataset Ingestion */}
-          <button
-            onClick={() => {
-              setIsJsonImportOpen(true);
-              if (setMobileOpen) setMobileOpen(false);
-            }}
-            className="w-full flex items-center justify-between p-2.5 hover:bg-white/5 text-slate-400 hover:text-slate-200 rounded-lg transition-colors text-left"
-          >
-            <div className="flex items-center space-x-3 ml-4">
-              <span className="text-sm">Dataset JSON</span>
-            </div>
-            <span className="text-[10px] text-slate-500">Manage</span>
-          </button>
-        </nav>
-
-        {/* Global Filters Section */}
-        <section>
-          <h3 className="text-[10px] uppercase tracking-widest text-violet-400 font-semibold mb-3">
-            Global Filters
-          </h3>
-
-          <div className="space-y-3 bg-[#0f0a1d]/60 p-3.5 rounded-xl border border-violet-500/10 text-xs">
-            <label className="flex items-center justify-between cursor-pointer group">
-              <div className="flex items-center space-x-2.5">
-                <input
-                  type="checkbox"
-                  checked={filters.eligibleOnly}
-                  onChange={(e) => updateFilter('eligibleOnly', e.target.checked)}
-                  className="accent-violet-500 w-4 h-4 bg-slate-800 border-none rounded cursor-pointer"
-                />
-                <span className="text-sm text-slate-300 group-hover:text-white">Eligible Only</span>
-              </div>
-              <span className="text-[11px] text-emerald-400 font-mono font-medium">
-                {stats.eligibleCount}
-              </span>
-            </label>
-
-            <label className="flex items-center justify-between cursor-pointer group">
-              <div className="flex items-center space-x-2.5">
-                <input
-                  type="checkbox"
-                  checked={filters.fundingTypes.includes('fully_funded')}
-                  onChange={handleToggleFunding}
-                  className="accent-violet-500 w-4 h-4 bg-slate-800 border-none rounded cursor-pointer"
-                />
-                <span className="text-sm text-slate-300 group-hover:text-white">Fully Funded</span>
-              </div>
-              <span className="text-[11px] text-violet-300 font-mono font-medium">
-                {stats.fullyFundedCount}
-              </span>
-            </label>
-
-            <label className="flex items-center justify-between cursor-pointer group">
-              <div className="flex items-center space-x-2.5">
-                <input
-                  type="checkbox"
-                  checked={filters.worldwideOnly}
-                  onChange={(e) => updateFilter('worldwideOnly', e.target.checked)}
-                  className="accent-violet-500 w-4 h-4 bg-slate-800 border-none rounded cursor-pointer"
-                />
-                <span className="text-sm text-slate-300 group-hover:text-white">Worldwide / Online</span>
-              </div>
-            </label>
-
-            <label className="flex items-center justify-between cursor-pointer group">
-              <div className="flex items-center space-x-2.5">
-                <input
-                  type="checkbox"
-                  checked={filters.freeApplicationOnly}
-                  onChange={(e) => updateFilter('freeApplicationOnly', e.target.checked)}
-                  className="accent-violet-500 w-4 h-4 bg-slate-800 border-none rounded cursor-pointer"
-                />
-                <span className="text-sm text-slate-300 group-hover:text-white">Free Application ($0)</span>
-              </div>
-            </label>
-          </div>
-        </section>
-      </div>
-
-      {/* Footer Profile Strip */}
-      <div className="mt-auto pt-4 border-t border-violet-900/30">
-        <button
-          onClick={() => setIsProfileOpen(true)}
-          className="w-full flex items-center space-x-3 p-2 rounded-xl hover:bg-violet-950/30 transition-colors text-left group"
-        >
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-700 border border-violet-400/30 flex items-center justify-center font-bold text-white shrink-0 shadow-sm">
-            {profile.field.charAt(0)}
-          </div>
-          <div className="overflow-hidden min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate text-white group-hover:text-violet-200">
-              {profile.field} Scholar
-            </p>
-            <p className="text-[10px] text-slate-400 flex items-center gap-1">
-              <span>{profile.country}</span>
-              <span>•</span>
-              <span className="text-violet-400">Benchmark Active</span>
-            </p>
-          </div>
+        <button onClick={() => setIsProfileOpen(true)} className="flex items-center gap-3 border-t pt-4 text-left hover:bg-gray-50">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-green-100 font-semibold text-[#166534]">{profile.field.charAt(0)}</span>
+          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-gray-800">{profile.field} Scholar</span><span className="block truncate text-xs text-gray-500">{profile.country} · Edit profile</span></span>
+          <User className="h-4 w-4 text-gray-400" />
         </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };

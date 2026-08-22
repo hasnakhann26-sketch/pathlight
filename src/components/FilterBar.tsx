@@ -1,249 +1,46 @@
 import React from 'react';
+import { ArrowUpDown, Calendar, CheckCircle2, DollarSign, Globe2, RotateCcw, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { Category, Modality, FundingType } from '../types';
-import {
-  RotateCcw,
-  CheckCircle2,
-  Globe,
-  DollarSign,
-  Calendar,
-  ArrowUpDown,
-  Filter,
-} from 'lucide-react';
+import { Category, FundingType, Modality } from '../types';
 
-const TOP_CATEGORIES: Category[] = [
-  'Scholarships',
-  'Fellowships',
-  'Research',
-  'Exchanges',
-  'Grants',
-  'Competitions',
-  'Hackathons',
-  'Internships',
-  'Summer schools',
-  'Conferences',
-  'Leadership programs',
-  'Travel-funded programs',
-];
+const TOP_CATEGORIES: Category[] = ['Scholarships', 'Fellowships', 'Research', 'Exchanges', 'Grants', 'Competitions', 'Hackathons', 'Internships'];
 
 export const FilterBar: React.FC = () => {
   const { filters, updateFilter, resetFilters, opportunities } = useApp();
+  const sources = Array.from(new Set(opportunities.flatMap((opportunity) => opportunity.sources.map((source) => source.sourceName)))).sort();
 
-  const handleCategoryToggle = (cat: Category) => {
-    if (filters.selectedCategories.includes(cat)) {
-      updateFilter(
-        'selectedCategories',
-        filters.selectedCategories.filter((c) => c !== cat)
-      );
-    } else {
-      updateFilter('selectedCategories', [...filters.selectedCategories, cat]);
-    }
+  const toggle = <T,>(key: 'selectedCategories' | 'modalities' | 'fundingTypes', value: T) => {
+    const current = filters[key] as T[];
+    updateFilter(key, current.includes(value) ? current.filter((item) => item !== value) : [...current, value] as never);
   };
 
-  const handleModalityToggle = (mod: Modality) => {
-    if (filters.modalities.includes(mod)) {
-      updateFilter(
-        'modalities',
-        filters.modalities.filter((m) => m !== mod)
-      );
-    } else {
-      updateFilter('modalities', [...filters.modalities, mod]);
-    }
-  };
-
-  const handleFundingToggle = (fund: FundingType) => {
-    if (filters.fundingTypes.includes(fund)) {
-      updateFilter(
-        'fundingTypes',
-        filters.fundingTypes.filter((f) => f !== fund)
-      );
-    } else {
-      updateFilter('fundingTypes', [...filters.fundingTypes, fund]);
-    }
-  };
-
-  const isAnyFilterActive =
-    filters.searchQuery.trim() !== '' ||
-    filters.selectedCategories.length > 0 ||
-    filters.country !== '' ||
-    filters.worldwideOnly ||
-    filters.modalities.length > 0 ||
-    filters.fundingTypes.length > 0 ||
-    filters.freeApplicationOnly ||
-    filters.deadlineFilter !== 'all' ||
-    filters.eligibleOnly ||
-    filters.savedOnly ||
-    filters.sortBy !== 'best_match';
+  const active = filters.searchQuery.trim() || filters.selectedCategories.length || filters.modalities.length || filters.fundingTypes.length || filters.deadlineFilter !== 'all' || filters.eligibleOnly || filters.worldwideOnly || filters.freeApplicationOnly || filters.savedOnly;
 
   return (
-    <div className="mb-6 space-y-3">
-      {/* Category Pills Slider / Bar */}
+    <section className="space-y-3">
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <button
-          onClick={() => updateFilter('selectedCategories', [])}
-          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            filters.selectedCategories.length === 0
-              ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30'
-              : 'bg-[#0f0a1d] text-slate-400 hover:text-slate-200 hover:bg-[#150e29] border border-violet-500/10'
-          }`}
-        >
-          All Categories ({opportunities.length})
-        </button>
-
-        {TOP_CATEGORIES.map((cat) => {
-          const isSelected = filters.selectedCategories.includes(cat);
-          const count = opportunities.filter((o) => o.category === cat).length;
-          if (count === 0) return null;
-
-          return (
-            <button
-              key={cat}
-              onClick={() => handleCategoryToggle(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
-                isSelected
-                  ? 'bg-violet-600 text-white shadow-md shadow-violet-600/30 border border-violet-500'
-                  : 'bg-[#0f0a1d] text-slate-300 hover:text-white hover:bg-[#150e29] border border-violet-500/10'
-              }`}
-            >
-              <span>{cat}</span>
-              <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                  isSelected ? 'bg-violet-800 text-violet-100' : 'bg-black/40 text-slate-400'
-                }`}
-              >
-                {count}
-              </span>
-            </button>
-          );
+        <button onClick={() => updateFilter('selectedCategories', [])} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${filters.selectedCategories.length === 0 ? 'border-[#166534] bg-[#166534] text-white' : 'bg-white text-gray-600 hover:border-[#15803d] hover:text-[#166534]'}`}>All opportunities <span className="ml-1 text-[11px] opacity-70">{opportunities.length}</span></button>
+        {TOP_CATEGORIES.map((category) => {
+          const count = opportunities.filter((item) => item.category === category).length;
+          if (!count) return null;
+          const selected = filters.selectedCategories.includes(category);
+          return <button key={category} onClick={() => toggle('selectedCategories', category)} className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium ${selected ? 'border-[#166534] bg-green-50 text-[#166534]' : 'bg-white text-gray-600 hover:border-[#15803d] hover:text-[#166534]'}`}>{category} <span className="ml-1 text-[11px] text-gray-400">{count}</span></button>;
         })}
       </div>
-
-      {/* Secondary Filter Controls Strip */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#0a0514] border border-violet-900/30">
-        {/* Left Side: Quick Status Toggles */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-white p-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Eligible Only Toggle */}
-          <button
-            onClick={() => updateFilter('eligibleOnly', !filters.eligibleOnly)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-              filters.eligibleOnly
-                ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/50 shadow-sm'
-                : 'bg-slate-900/80 text-slate-300 hover:text-white border-white/5 hover:bg-slate-800'
-            }`}
-          >
-            <CheckCircle2 className={`w-3.5 h-3.5 ${filters.eligibleOnly ? 'text-emerald-400' : 'text-slate-500'}`} />
-            <span>Eligible Only</span>
-          </button>
-
-          {/* Fully Funded Toggle */}
-          <button
-            onClick={() => handleFundingToggle('fully_funded')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-              filters.fundingTypes.includes('fully_funded')
-                ? 'bg-violet-950/70 text-violet-300 border-violet-500/50 shadow-sm'
-                : 'bg-slate-900/80 text-slate-300 hover:text-white border-white/5 hover:bg-slate-800'
-            }`}
-          >
-            <DollarSign className={`w-3.5 h-3.5 ${filters.fundingTypes.includes('fully_funded') ? 'text-violet-400' : 'text-slate-500'}`} />
-            <span>Fully Funded</span>
-          </button>
-
-          {/* Worldwide / Online Toggle */}
-          <button
-            onClick={() => updateFilter('worldwideOnly', !filters.worldwideOnly)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-              filters.worldwideOnly
-                ? 'bg-indigo-950/70 text-indigo-300 border-indigo-500/50 shadow-sm'
-                : 'bg-slate-900/80 text-slate-300 hover:text-white border-white/5 hover:bg-slate-800'
-            }`}
-          >
-            <Globe className={`w-3.5 h-3.5 ${filters.worldwideOnly ? 'text-indigo-400' : 'text-slate-500'}`} />
-            <span>Worldwide / Online</span>
-          </button>
-
-          {/* Modality Toggles */}
-          <div className="flex items-center bg-slate-900/90 p-0.5 rounded-lg border border-white/5 text-xs">
-            {(['online', 'in-person', 'hybrid'] as Modality[]).map((mod) => {
-              const active = filters.modalities.includes(mod);
-              return (
-                <button
-                  key={mod}
-                  onClick={() => handleModalityToggle(mod)}
-                  className={`px-2.5 py-1 rounded-md capitalize font-medium transition-all ${
-                    active ? 'bg-violet-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {mod}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Deadline Filter Dropdown */}
-          <div className="flex items-center gap-1 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-white/5 text-xs">
-            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={filters.deadlineFilter}
-              onChange={(e) => updateFilter('deadlineFilter', e.target.value as any)}
-              className="bg-transparent text-slate-300 font-medium outline-none cursor-pointer pr-1"
-            >
-              <option value="all" className="bg-[#0a0514] text-slate-200">
-                All Deadlines
-              </option>
-              <option value="closing_soon" className="bg-[#0a0514] text-amber-300">
-                Closing Soon (&lt; 7 days)
-              </option>
-              <option value="closing_this_month" className="bg-[#0a0514] text-violet-300">
-                Closing This Month
-              </option>
-              <option value="opening_soon" className="bg-[#0a0514] text-sky-300">
-                Opening Soon
-              </option>
-              <option value="no_deadline" className="bg-[#0a0514] text-slate-300">
-                Rolling / No Deadline
-              </option>
-            </select>
-          </div>
+          <button onClick={() => updateFilter('eligibleOnly', !filters.eligibleOnly)} className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs font-medium ${filters.eligibleOnly ? 'border-green-200 bg-green-50 text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}><CheckCircle2 className="h-3.5 w-3.5" />Eligible only</button>
+          <button onClick={() => toggle('fundingTypes', 'fully_funded' as FundingType)} className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs font-medium ${filters.fundingTypes.includes('fully_funded') ? 'border-green-200 bg-green-50 text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}><DollarSign className="h-3.5 w-3.5" />Fully funded</button>
+          <button onClick={() => updateFilter('worldwideOnly', !filters.worldwideOnly)} className={`flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs font-medium ${filters.worldwideOnly ? 'border-green-200 bg-green-50 text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}><Globe2 className="h-3.5 w-3.5" />Worldwide / online</button>
+          <div className="flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs text-gray-600"><Calendar className="h-3.5 w-3.5 text-gray-400" /><select value={filters.deadlineFilter} onChange={(e) => updateFilter('deadlineFilter', e.target.value as any)} className="bg-transparent outline-none"><option value="all">Any deadline</option><option value="closing_soon">Closing soon</option><option value="closing_this_month">This month</option><option value="no_deadline">No deadline</option></select></div>
+          <select value={filters.source} onChange={(e) => updateFilter('source', e.target.value)} className="max-w-[170px] rounded border bg-white px-2.5 py-1.5 text-xs text-gray-600 outline-none focus:border-[#15803d]"><option value="">All sources</option>{sources.map((source) => <option key={source} value={source}>{source}</option>)}</select>
+          <div className="hidden items-center rounded border p-0.5 text-xs sm:flex">{(['online', 'in-person', 'hybrid'] as Modality[]).map((modality) => <button key={modality} onClick={() => toggle('modalities', modality)} className={`rounded px-2 py-1 capitalize ${filters.modalities.includes(modality) ? 'bg-[#166534] text-white' : 'text-gray-500 hover:bg-gray-50'}`}>{modality}</button>)}</div>
         </div>
-
-        {/* Right Side: Sorting & Reset */}
-        <div className="flex items-center gap-2 ml-auto">
-          <div className="flex items-center gap-1.5 bg-slate-900/90 px-2.5 py-1 rounded-lg border border-white/5 text-xs">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-slate-500 hidden sm:inline">Sort:</span>
-            <select
-              value={filters.sortBy}
-              onChange={(e) => updateFilter('sortBy', e.target.value as any)}
-              className="bg-transparent text-slate-200 font-medium outline-none cursor-pointer"
-            >
-              <option value="best_match" className="bg-[#0a0514] text-slate-200">
-                Best Match Score
-              </option>
-              <option value="deadline_asc" className="bg-[#0a0514] text-slate-200">
-                Earliest Deadline
-              </option>
-              <option value="funding_high" className="bg-[#0a0514] text-slate-200">
-                Highest Funding
-              </option>
-              <option value="newest" className="bg-[#0a0514] text-slate-200">
-                Recently Verified
-              </option>
-            </select>
-          </div>
-
-          {isAnyFilterActive && (
-            <button
-              onClick={resetFilters}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-colors border border-white/5"
-              title="Reset all filters to default"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Reset</span>
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs text-gray-600"><ArrowUpDown className="h-3.5 w-3.5 text-gray-400" /><select value={filters.sortBy} onChange={(e) => updateFilter('sortBy', e.target.value as any)} className="bg-transparent outline-none"><option value="best_match">Best match</option><option value="deadline_asc">Earliest deadline</option><option value="funding_high">Highest funding</option><option value="newest">Recently verified</option></select></div>
+          {active && <button onClick={resetFilters} className="flex items-center gap-1 rounded px-2 py-1.5 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-900"><RotateCcw className="h-3 w-3" />Reset</button>}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
-

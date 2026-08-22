@@ -1,0 +1,45 @@
+Redesign my existing Pathlight website to look and feel exactly like Devpost.com. Here are the exact changes:
+
+COLOURS:
+- Change all black backgrounds to clean white (#FFFFFF) and light grey (#F8F9FA)
+- Change all purple to dark green (#166534 and #15803D)
+- Text should be dark grey (#111827) not black
+- Borders should be very light grey (#E5E7EB)
+- Accent/highlight colour is dark green (#16A34A)
+- Cards have white background with very subtle grey border and slight shadow
+- Navigation bar is white with a thin bottom border
+
+TYPOGRAPHY:
+- Use Inter font (import from Google Fonts)
+- Same font sizing and weight system as Devpost
+- Clean readable text, nothing bold unless necessary
+
+LAYOUT (copy Devpost structure exactly):
+- Clean white top navigation bar with logo on left, links on right
+- No dark hero sections — replace with a clean minimal search bar section on white background
+- Opportunity cards displayed in a clean grid (3 columns desktop, 2 tablet, 1 mobile)
+- Each card: white background, rounded corners (8px), subtle shadow, category tag in top left, title, short description, deadline badge, source, Apply button
+- Left sidebar with filter options (category, deadline range, type)
+- Right main content area showing the cards
+
+REMOVE COMPLETELY:
+- The box that says "you don't know these things exist" or any placeholder/empty state boxes
+- Any dark overlays or dark sections
+- Any purple gradients or decorations
+- Any placeholder sections that aren't showing real data
+
+KEEP THE SAME:
+- Overall strategy and purpose of the site
+- Logo and site name "Pathlight"
+- Navigation structure
+- All existing functionality
+
+ADD:
+- "Applied" button on each opportunity card that when clicked turns green and saves to localStorage
+- A separate "My Applications" tab/page showing all opportunities I clicked Apply on
+- Status tracking on applied opportunities: Applied, In Review, Results Pending, Accepted, Rejected — user can update the status manually
+- Deadline approaching badge (shows "Closing Soon" in orange if under 7 days)
+- Clean empty state when no results match filter (simple text, no big boxes)
+- Smooth hover effects on cards (slight shadow lift)
+
+The final result should look indistinguishable from Devpost in terms of cleanliness, whitespace, and professional feel — but for global youth opportunities instead of hackathons.

@@ -1,17 +1,6 @@
 import React from 'react';
+import { Bookmark, LayoutGrid, List, Menu, Search, User, BriefcaseBusiness } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import {
-  Menu,
-  Search,
-  LayoutGrid,
-  List,
-  Bookmark,
-  Database,
-  UploadCloud,
-  User,
-  SlidersHorizontal,
-  RotateCcw,
-} from 'lucide-react';
 
 interface HeaderProps {
   onToggleMobileSidebar?: () => void;
@@ -23,109 +12,75 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
     updateFilter,
     profile,
     setIsProfileOpen,
-    setIsSourceRegistryOpen,
-    setIsJsonImportOpen,
     savedOpportunityIds,
+    applications,
+    activeView,
+    setActiveView,
     viewMode,
     setViewMode,
   } = useApp();
 
   return (
-    <header className="h-20 border-b border-violet-900/20 px-4 sm:px-8 flex items-center justify-between bg-[#050308]/90 backdrop-blur-md sticky top-0 z-30 transition-all">
-      {/* Mobile Menu Button */}
+    <header className="sticky top-0 z-30 flex min-h-[68px] items-center justify-between gap-4 border-b bg-white px-4 sm:px-8">
       <div className="flex items-center gap-3 lg:hidden">
-        <button
-          onClick={onToggleMobileSidebar}
-          className="p-2 rounded-xl bg-slate-900/80 text-slate-300 hover:text-white border border-white/5"
-          title="Toggle Navigation Menu"
-        >
-          <Menu className="w-5 h-5" />
+        <button onClick={onToggleMobileSidebar} className="rounded-md p-2 text-gray-600 hover:bg-gray-100" aria-label="Open navigation">
+          <Menu className="h-5 w-5" />
         </button>
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 bg-violet-600 rounded-lg flex items-center justify-center font-bold text-white text-xs">
-            P
-          </div>
-          <span className="font-bold text-white text-sm">Pathlight</span>
+        <div className="flex items-center gap-2 font-semibold text-gray-900">
+          <span className="flex h-7 w-7 items-center justify-center rounded bg-[#166534] text-sm font-bold text-white">P</span>
+          Pathlight
         </div>
       </div>
 
-      {/* Global Search Input */}
-      <div className="flex-1 max-w-2xl hidden md:flex items-center bg-slate-900/50 rounded-xl px-4 py-2.5 border border-white/5 focus-within:border-violet-500/50 transition-all">
-        <span className="text-slate-500 mr-3">🔍</span>
-        <input
-          type="text"
-          value={filters.searchQuery}
-          onChange={(e) => updateFilter('searchQuery', e.target.value)}
-          placeholder="Search global opportunities (e.g. Psychology research, DAAD, CERN, fully funded)..."
-          className="bg-transparent border-none focus:ring-0 text-sm w-full text-slate-200 placeholder:text-slate-500 outline-none"
-        />
-        {filters.searchQuery && (
-          <button
-            onClick={() => updateFilter('searchQuery', '')}
-            className="text-xs text-slate-400 hover:text-white ml-2"
-          >
-            ✕
-          </button>
-        )}
+      <div className="hidden flex-1 items-center gap-2 md:flex">
+        <div className="flex w-full max-w-xl items-center gap-2 rounded-md border bg-[#f8f9fa] px-3 py-2 focus-within:border-[#15803d] focus-within:bg-white">
+          <Search className="h-4 w-4 text-gray-500" />
+          <input
+            value={filters.searchQuery}
+            onChange={(e) => updateFilter('searchQuery', e.target.value)}
+            placeholder="Search opportunities, organizations, or skills"
+            className="w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-500"
+          />
+        </div>
       </div>
 
-      {/* Right Controls: View Mode & Action Badges */}
-      <div className="flex items-center space-x-3 sm:space-x-4">
-        {/* Grid vs List View Toggle */}
-        <div className="flex space-x-1 p-1 bg-slate-900 rounded-lg border border-white/5">
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`px-3 py-1.5 text-xs rounded-md font-medium flex items-center gap-1.5 transition-all ${
-              viewMode === 'grid'
-                ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="Grid View"
-          >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Grid</span>
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`px-3 py-1.5 text-xs rounded-md font-medium flex items-center gap-1.5 transition-all ${
-              viewMode === 'list'
-                ? 'bg-violet-600 text-white shadow-lg shadow-violet-600/30'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-            title="List View"
-          >
-            <List className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">List</span>
-          </button>
-        </div>
-
-        {/* Saved List Quick Filter Toggle */}
+      <nav className="flex items-center gap-1 sm:gap-4">
+        <button
+          onClick={() => setActiveView('opportunities')}
+          className={`hidden px-2 py-2 text-sm font-medium transition-colors sm:block ${activeView === 'opportunities' ? 'text-[#166534]' : 'text-gray-600 hover:text-gray-900'}`}
+        >
+          Discover
+        </button>
+        <button
+          onClick={() => setActiveView('applications')}
+          className={`flex items-center gap-1.5 px-2 py-2 text-sm font-medium transition-colors ${activeView === 'applications' ? 'text-[#166534]' : 'text-gray-600 hover:text-gray-900'}`}
+        >
+          <BriefcaseBusiness className="h-4 w-4" />
+          <span className="hidden sm:inline">My Applications</span>
+          <span className="rounded-full bg-gray-100 px-1.5 text-[11px] text-gray-600">{Object.keys(applications).length}</span>
+        </button>
         <button
           onClick={() => updateFilter('savedOnly', !filters.savedOnly)}
-          className={`flex items-center space-x-1.5 px-3 py-2 text-xs font-medium rounded-xl border transition-all ${
-            filters.savedOnly
-              ? 'bg-violet-600/20 text-violet-300 border-violet-500/40 shadow-sm'
-              : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border-white/5 hover:bg-slate-800'
-          }`}
-          title="Toggle Saved Bookmarks"
+          className={`flex items-center gap-1.5 rounded-md px-2 py-2 text-sm font-medium transition-colors ${filters.savedOnly ? 'bg-green-50 text-[#166534]' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
         >
-          <Bookmark className={`w-3.5 h-3.5 ${filters.savedOnly ? 'fill-violet-400 text-violet-400' : ''}`} />
+          <Bookmark className={`h-4 w-4 ${filters.savedOnly ? 'fill-current' : ''}`} />
           <span className="hidden sm:inline">Saved</span>
-          <span className="text-[11px] px-1.5 py-0.2 rounded-full bg-black/40 text-violet-300 font-mono font-bold">
-            {savedOpportunityIds.length}
-          </span>
+          <span className="text-[11px]">{savedOpportunityIds.length}</span>
         </button>
-
-        {/* Mobile Profile Trigger */}
-        <button
-          onClick={() => setIsProfileOpen(true)}
-          className="lg:hidden p-2 rounded-xl bg-slate-900 border border-white/5 text-slate-300"
-          title="Open Profile Settings"
-        >
-          <User className="w-4 h-4 text-violet-400" />
+        <div className="hidden items-center gap-1 border-l pl-3 lg:flex">
+          <button onClick={() => setViewMode('grid')} className={`rounded p-2 ${viewMode === 'grid' ? 'bg-gray-100 text-[#166534]' : 'text-gray-500'}`} aria-label="Grid view">
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button onClick={() => setViewMode('list')} className={`rounded p-2 ${viewMode === 'list' ? 'bg-gray-100 text-[#166534]' : 'text-gray-500'}`} aria-label="List view">
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+        <button onClick={() => setIsProfileOpen(true)} className="ml-1 flex items-center gap-2 rounded-md p-1.5 text-gray-600 hover:bg-gray-100" aria-label="Open profile">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 text-sm font-semibold text-[#166534]">{profile.field.charAt(0)}</span>
+          <span className="hidden text-sm font-medium text-gray-800 xl:inline">{profile.field}</span>
+          <User className="hidden h-4 w-4 xl:block" />
         </button>
-      </div>
+      </nav>
     </header>
   );
 };
-

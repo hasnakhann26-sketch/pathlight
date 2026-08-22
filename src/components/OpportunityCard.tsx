@@ -1,253 +1,72 @@
 import React from 'react';
-import { Opportunity, MatchScoreResult } from '../types';
+import { Bookmark, Check, Clock3, ExternalLink, MapPin, ShieldCheck } from 'lucide-react';
+import { Opportunity, ApplicationStatus, MatchScoreResult } from '../types';
 import { useApp } from '../context/AppContext';
 import { calculateDeadlineStatus } from '../engine/matchingEngine';
-import {
-  Bookmark,
-  CheckCircle2,
-  AlertTriangle,
-  ExternalLink,
-  MapPin,
-  Clock,
-  Sparkles,
-  ShieldCheck,
-  ChevronRight,
-  Layers,
-} from 'lucide-react';
 
 interface OpportunityCardProps {
   opportunity: Opportunity;
   matchResult: MatchScoreResult;
+  applicationView?: boolean;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  Scholarships: '🎓',
-  Fellowships: '🔬',
-  Research: '🧪',
-  Exchanges: '🌎',
-  Grants: '💰',
-  Competitions: '🏆',
-  Hackathons: '💻',
-  Internships: '💼',
-  'Summer schools': '☀️',
-  Conferences: '🎙️',
-  'Leadership programs': '⚡',
-  'Travel-funded programs': '✈️',
-};
+const STATUS_OPTIONS: ApplicationStatus[] = ['Applied', 'In Review', 'Results Pending', 'Accepted', 'Rejected'];
 
-export const OpportunityCard: React.FC<OpportunityCardProps> = ({
-  opportunity,
-  matchResult,
-}) => {
-  const { toggleSaveOpportunity, isSaved, setSelectedOpportunity, viewMode } = useApp();
+export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity, matchResult, applicationView = false }) => {
+  const { toggleSaveOpportunity, isSaved, setSelectedOpportunity, viewMode, applications, applyToOpportunity, updateApplicationStatus, updateApplicationNotes, isApplied } = useApp();
   const saved = isSaved(opportunity.canonicalOpportunityId);
-  const deadlineInfo = calculateDeadlineStatus(opportunity.deadline, opportunity.openingDate);
+  const applied = isApplied(opportunity.canonicalOpportunityId);
+  const deadline = calculateDeadlineStatus(opportunity.deadline, opportunity.openingDate);
+  const closingSoon = deadline.status === 'closing_soon' || deadline.status === 'closing_today';
+  const funding = opportunity.funding === 'fully_funded' ? 'Fully funded' : opportunity.funding === 'paid' ? opportunity.stipend || 'Paid' : opportunity.funding === 'prize' ? opportunity.prize || 'Prize available' : opportunity.funding.replace('_', ' ');
 
-  const icon = CATEGORY_ICONS[opportunity.category] || '✨';
-
-  // Funding badge formatting
-  const getFundingDisplay = () => {
-    switch (opportunity.funding) {
-      case 'fully_funded':
-        return { label: 'Fully Funded', color: 'text-emerald-400 font-semibold' };
-      case 'paid':
-        return { label: opportunity.stipend || 'Paid Stipend', color: 'text-violet-300 font-semibold' };
-      case 'prize':
-        return { label: opportunity.prize || 'Prize / Award', color: 'text-indigo-300 font-semibold' };
-      case 'partially_funded':
-        return { label: 'Partially Funded', color: 'text-amber-300 font-medium' };
-      default:
-        return { label: 'Self-Funded', color: 'text-slate-400 font-normal' };
-    }
-  };
-
-  const fundingDisplay = getFundingDisplay();
-
-  // List View Rendering
-  if (viewMode === 'list') {
-    return (
-      <div
-        onClick={() => setSelectedOpportunity(opportunity)}
-        className="bg-[#0f0a1d] rounded-2xl p-5 border border-violet-500/10 hover:border-violet-500/30 transition-all cursor-pointer group flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative"
-      >
-        <div className="flex items-center space-x-4 min-w-0 flex-1">
-          <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center border border-white/5 shrink-0 text-xl">
-            {icon}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-xs text-slate-400">{opportunity.organization}</span>
-              {opportunity.verificationStatus === 'verified' && (
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" title="Verified source" />
-              )}
-              <span className="text-[10px] px-2 py-0.5 rounded bg-violet-950/80 text-violet-300 border border-violet-800/40">
-                {opportunity.category}
-              </span>
-            </div>
-
-            <h3 className="text-base font-bold text-white group-hover:text-violet-200 truncate">
-              {opportunity.title}
-            </h3>
-
-            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
-              <span className={fundingDisplay.color}>{fundingDisplay.label}</span>
-              <span>•</span>
-              <span>{opportunity.worldwide ? 'Worldwide' : opportunity.country}</span>
-              <span>•</span>
-              <span
-                className={
-                  deadlineInfo.status === 'closing_soon' || deadlineInfo.status === 'closing_today'
-                    ? 'text-amber-400 font-medium'
-                    : 'text-slate-400'
-                }
-              >
-                {deadlineInfo.label}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 shrink-0 self-end sm:self-center">
-          <div className="bg-violet-500/20 text-violet-400 px-2.5 py-1 rounded text-[10px] font-bold tracking-tighter">
-            {matchResult.totalScore}% MATCH
-          </div>
-
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleSaveOpportunity(opportunity.canonicalOpportunityId);
-            }}
-            className={`p-2 rounded-xl border transition-all ${
-              saved
-                ? 'bg-violet-600 text-white border-violet-500'
-                : 'bg-black/30 text-slate-400 hover:text-white border-white/5'
-            }`}
-            title={saved ? 'Remove saved' : 'Save bookmark'}
-          >
-            <Bookmark className={`w-4 h-4 ${saved ? 'fill-white' : ''}`} />
-          </button>
-
-          <span className="text-xs font-bold text-violet-400 group-hover:text-violet-300 flex items-center">
-            Details →
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  // Grid View Rendering (Matching Elegant Dark HTML specification)
   return (
-    <div
-      onClick={() => setSelectedOpportunity(opportunity)}
-      className="bg-[#0f0a1d] rounded-2xl p-6 border border-violet-500/10 hover:border-violet-500/30 transition-all relative group flex flex-col justify-between cursor-pointer"
-    >
-      {/* Match Score Badge */}
-      <div className="absolute top-4 right-4 flex items-center gap-2">
-        <div className="bg-violet-500/20 text-violet-400 px-2 py-1 rounded text-[10px] font-bold tracking-tighter">
-          {matchResult.totalScore}% MATCH
+    <article onClick={() => setSelectedOpportunity(opportunity)} className={`group flex cursor-pointer flex-col rounded-lg border bg-white p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(17,24,39,0.10)] ${viewMode === 'list' ? 'sm:flex-row sm:items-center sm:gap-6' : ''}`}>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded bg-green-50 px-2 py-1 text-[11px] font-semibold text-[#166534]">{opportunity.category}</span>
+            {opportunity.verificationStatus === 'verified' && <span className="flex items-center gap-1 text-[11px] text-gray-500"><ShieldCheck className="h-3.5 w-3.5 text-[#16a34a]" />Verified</span>}
+          </div>
+          <button onClick={(e) => { e.stopPropagation(); toggleSaveOpportunity(opportunity.canonicalOpportunityId); }} className={`rounded p-1.5 ${saved ? 'bg-green-50 text-[#166534]' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-700'}`} aria-label={saved ? 'Remove saved opportunity' : 'Save opportunity'}>
+            <Bookmark className={`h-4 w-4 ${saved ? 'fill-current' : ''}`} />
+          </button>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleSaveOpportunity(opportunity.canonicalOpportunityId);
-          }}
-          className={`p-1.5 rounded-lg border transition-all ${
-            saved
-              ? 'bg-violet-600 text-white border-violet-500'
-              : 'bg-black/30 text-slate-400 hover:text-white border-white/5'
-          }`}
-          title={saved ? 'Remove bookmark' : 'Save bookmark'}
-        >
-          <Bookmark className={`w-3.5 h-3.5 ${saved ? 'fill-white' : ''}`} />
-        </button>
+        <p className="mb-1 text-xs font-medium text-gray-500">{opportunity.organization}</p>
+        <h3 className="mb-2 line-clamp-2 text-base font-semibold leading-snug text-gray-900 group-hover:text-[#166534]">{opportunity.title}</h3>
+        <p className="mb-5 line-clamp-3 text-sm leading-relaxed text-gray-600">{opportunity.description}</p>
+
+        <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
+          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{opportunity.worldwide ? 'Worldwide' : opportunity.country}</span>
+          <span className="font-medium capitalize text-gray-700">{funding}</span>
+          <span className={`flex items-center gap-1 ${closingSoon ? 'font-semibold text-orange-600' : ''}`}><Clock3 className="h-3.5 w-3.5" />{closingSoon ? 'Closing Soon' : deadline.label}</span>
+        </div>
+
+        {applicationView ? (
+          <div className="mt-auto flex items-center justify-between gap-3 border-t pt-4" onClick={(e) => e.stopPropagation()}>
+            <label className="flex items-center gap-2 text-xs font-medium text-gray-500">Status
+              <select value={applications[opportunity.canonicalOpportunityId]?.status} onChange={(e) => updateApplicationStatus(opportunity.canonicalOpportunityId, e.target.value as ApplicationStatus)} className="rounded border bg-white px-2 py-1.5 text-xs font-medium text-gray-700 outline-none focus:border-[#15803d]">
+                {STATUS_OPTIONS.map((status) => <option key={status}>{status}</option>)}
+              </select>
+            </label>
+            <input
+              value={applications[opportunity.canonicalOpportunityId]?.notes || ''}
+              onChange={(e) => updateApplicationNotes(opportunity.canonicalOpportunityId, e.target.value)}
+              placeholder="Add a note"
+              className="min-w-0 flex-1 rounded border px-2 py-1.5 text-xs text-gray-700 outline-none focus:border-[#15803d]"
+            />
+            <a href={opportunity.applicationUrl} target="_blank" rel="noreferrer noopener" className="flex items-center gap-1 text-xs font-semibold text-[#166534] hover:underline">Open portal <ExternalLink className="h-3 w-3" /></a>
+          </div>
+        ) : (
+          <div className="mt-auto flex items-center justify-between gap-3 border-t pt-4" onClick={(e) => e.stopPropagation()}>
+            <span className={`text-xs font-medium ${matchResult.isEligible ? 'text-[#166534]' : 'text-gray-500'}`}>{matchResult.totalScore}% match · {matchResult.isEligible ? 'Eligible' : 'Review eligibility'}</span>
+            <button onClick={() => applyToOpportunity(opportunity.canonicalOpportunityId)} className={`flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-semibold transition-colors ${applied ? 'bg-[#16a34a] text-white' : 'bg-[#166534] text-white hover:bg-[#15803d]'}`}>
+              {applied ? <Check className="h-3.5 w-3.5" /> : null}{applied ? 'Applied' : 'Apply'}
+            </button>
+          </div>
+        )}
       </div>
-
-      {/* Header Info: Icon & Category */}
-      <div className="mb-4">
-        <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center mb-4 border border-white/5">
-          <span className="text-xl">{icon}</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="text-xs text-slate-400">{opportunity.organization}</span>
-          {opportunity.verificationStatus === 'verified' && (
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" title="Verified source" />
-          )}
-        </div>
-
-        <h3 className="text-lg font-bold text-white leading-tight mb-2 group-hover:text-violet-200 line-clamp-2 transition-colors">
-          {opportunity.title}
-        </h3>
-
-        <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
-          {opportunity.description}
-        </p>
-      </div>
-
-      {/* Inset Logistics Box (Funding & Deadline) */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-black/20 p-3 rounded-lg border border-white/5">
-          <p className="text-[10px] uppercase text-slate-500 mb-1">Funding</p>
-          <p className={`text-xs truncate ${fundingDisplay.color}`} title={fundingDisplay.label}>
-            {fundingDisplay.label}
-          </p>
-        </div>
-
-        <div className="bg-black/20 p-3 rounded-lg border border-white/5">
-          <p className="text-[10px] uppercase text-slate-500 mb-1">Deadline</p>
-          <p
-            className={`text-xs font-semibold truncate ${
-              deadlineInfo.status === 'closing_soon' || deadlineInfo.status === 'closing_today'
-                ? 'text-orange-400'
-                : 'text-slate-200'
-            }`}
-            title={deadlineInfo.label}
-          >
-            {deadlineInfo.label}
-          </p>
-        </div>
-      </div>
-
-      {/* Transparent Match Reason Snippet */}
-      {matchResult.whyItMatches.length > 0 && (
-        <div className="mb-4 pt-2 border-t border-violet-900/20 text-[11px] text-slate-400 flex items-start gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-violet-400 shrink-0 mt-0.5" />
-          <span className="line-clamp-1 text-slate-300">
-            {matchResult.whyItMatches[0]}
-          </span>
-        </div>
-      )}
-
-      {/* Card Footer Strip: Eligibility Status & View Action */}
-      <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
-        <div className="flex items-center text-xs text-slate-400">
-          {matchResult.isEligible ? (
-            <>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 shrink-0"></span>
-              <span className="text-emerald-400 font-medium">Eligible</span>
-            </>
-          ) : (
-            <>
-              <span className="w-2 h-2 rounded-full bg-amber-500 mr-2 shrink-0"></span>
-              <span className="text-amber-300 font-medium">Watchouts</span>
-            </>
-          )}
-        </div>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setSelectedOpportunity(opportunity);
-          }}
-          className="text-xs font-bold text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors"
-        >
-          <span>View Details</span>
-          <span>→</span>
-        </button>
-      </div>
-    </div>
+    </article>
   );
 };
-

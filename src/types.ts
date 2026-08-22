@@ -21,6 +21,14 @@ export type EducationLevel =
   | 'Any';
 
 export type Category =
+  | 'Essay / Writing'
+  | 'Quiz / Olympiad'
+  | 'MUN'
+  | 'Grant'
+  | 'Travel / Exchange'
+  | 'Competition / Hackathon'
+  | 'Conference / Summit'
+  | 'Scholarship'
   | 'Scholarships'
   | 'Fellowships'
   | 'Grants'
@@ -97,7 +105,9 @@ export interface Opportunity {
 }
 
 export interface UserProfile {
+  name?: string;
   age: number;
+  ageGroup?: '15-17' | '18-20' | '21-25' | '26-30' | '30+';
   country: string;
   citizenship: string;
   educationLevel: EducationLevel;
@@ -167,6 +177,19 @@ export type DeadlineStatus =
   | 'no_deadline'
   | 'expired';
 
+export type ApplicationStatus =
+  | 'Applied'
+  | 'In Review'
+  | 'Results Pending'
+  | 'Accepted'
+  | 'Rejected';
+
+export interface ApplicationRecord {
+  status: ApplicationStatus;
+  appliedAt: string;
+  notes: string;
+}
+
 export interface SourceRegistryEntry {
   sourceId: string;
   sourceName: string;
@@ -195,5 +218,6 @@ export interface FilterState {
   deadlineFilter: 'all' | 'closing_soon' | 'closing_this_month' | 'opening_soon' | 'active_only' | 'no_deadline';
   eligibleOnly: boolean;
   savedOnly: boolean;
+  source: string;
   sortBy: 'best_match' | 'deadline_asc' | 'funding_high' | 'newest';
 }

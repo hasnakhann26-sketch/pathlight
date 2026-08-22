@@ -140,7 +140,18 @@ export const ProfileModal: React.FC = () => {
               <span>Demographics & Nationality</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Name (optional)</label>
+                <input
+                  type="text"
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Your name"
+                  className="w-full px-3 py-2 rounded-xl bg-[#0f0a1d] border border-white/10 focus:border-violet-500 text-white outline-none"
+                />
+              </div>
+
               <div>
                 <label className="block text-slate-300 font-medium mb-1">Age</label>
                 <input
@@ -152,6 +163,21 @@ export const ProfileModal: React.FC = () => {
                   className="w-full px-3 py-2 rounded-xl bg-[#0f0a1d] border border-white/10 focus:border-violet-500 text-white outline-none"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Age Group</label>
+                <select
+                  value={formData.ageGroup || '18-20'}
+                  onChange={(e) => setFormData({ ...formData, ageGroup: e.target.value as UserProfile['ageGroup'] })}
+                  className="w-full px-3 py-2 rounded-xl bg-[#0f0a1d] border border-white/10 focus:border-violet-500 text-white outline-none cursor-pointer"
+                >
+                  <option value="15-17">15 to 17</option>
+                  <option value="18-20">18 to 20</option>
+                  <option value="21-25">21 to 25</option>
+                  <option value="26-30">26 to 30</option>
+                  <option value="30+">30 and above</option>
+                </select>
               </div>
 
               <div>

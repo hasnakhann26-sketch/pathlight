@@ -1,0 +1,128 @@
+Add a complete automatic opportunity aggregator to this Pathlight project. Connect all these sources:
+
+TIER 1 — Main aggregators (fetch every 6 hours):
+- https://opportunitydesk.org/feed/
+- https://www.youthop.com/feed
+- https://oyaop.com/feed/
+- https://opportunitiesforyouth.org/feed/
+- https://opportunitiesradar.com/feed/
+
+TIER 2 — Specialist sources (fetch every 12 hours):
+- https://www2.fundsforngos.org/feed/
+- https://globalgrantshub.org/feed/
+- https://studentcompetitions.com/rss
+- https://opportunitiescorners.com/feed/
+- https://bestdelegate.com/feed/
+
+TIER 3 — Specialist type sources (fetch once daily):
+- https://imo-official.org
+- https://www.ipho-new.org
+- https://icho.events
+- https://mymun.com/conferences
+- https://bestdelegate.com/model-un-conferences/
+
+FETCHING METHOD:
+- Use https://api.allorigins.win/raw?url= as CORS proxy for all feeds
+- Parse RSS/XML feeds in JavaScript
+- For Tier 3 sites without RSS, scrape the HTML and extract titles, links and dates
+- Cache all results in localStorage
+- Show loading spinner while fetching
+- Show last updated timestamp
+- If any source fails, skip it silently and continue with others
+
+AGE GROUPS — user selects their age group on first visit and can change anytime:
+- 15 to 17
+- 18 to 20
+- 21 to 25
+- 26 to 30
+- 30 and above
+Show only opportunities whose eligibility matches the selected age group. If an opportunity says "open to all ages" or has no age restriction, show it to everyone.
+
+COUNTRY / NATIONALITY FILTER:
+- User sets their current country AND their original nationality separately
+- Example: nationality = Pakistani, current country = UK
+- Show opportunity if ANY of these are true:
+  * It is open worldwide / all nationalities / international
+  * It matches the user's nationality (e.g. Pakistani students)
+  * It matches the user's current country of residence
+  * It has no country restriction mentioned
+- This way if user moves countries later they update their current country and still see everything they qualify for
+
+FIELD OF STUDY FILTER:
+- User selects their major/field: Sciences, Engineering, Social Sciences, Business/Economics, Arts/Humanities, Psychology, Law, Medicine, Any/Not specified
+- Show opportunity if:
+  * It accepts all majors / no major restriction
+  * It matches the user's selected field
+  * It does not mention any field restriction
+
+EXCLUDE ONLY THESE:
+- Opportunities that require building a full website from scratch as the main deliverable
+- Opportunities that require advanced software engineering or complex programming as the main task
+- Expired deadlines (deadline date already passed)
+- Exact duplicates (same title appearing from multiple sources)
+
+KEEP AND INCLUDE:
+- Hackathons and competitions where you can use AI tools to help build things
+- Easy coding projects doable with AI assistance
+- Competitions where Pathlight itself or a simple project could be submitted
+- All essay, writing, quiz, debate, MUN, fellowship, grant, scholarship, olympiad, travel, exchange, conference, research, internship, award, prize, leadership, summit opportunities
+- All age groups from 15 onwards
+- All nationalities and countries
+- All majors unless specifically restricted
+
+AUTO-CATEGORISE every opportunity into:
+- Essay / Writing
+- Quiz / Olympiad
+- MUN
+- Fellowship
+- Grant
+- Travel / Exchange
+- Research
+- Internship
+- Competition / Hackathon
+- Conference / Summit
+- Scholarship
+
+AUTO-SECTIONS on homepage:
+- "Closing This Week" — deadlines within 7 days, red urgency badge
+- "Closing This Month" — deadlines within 30 days
+- "New This Week" — added in last 7 days
+- "Fellowships"
+- "Fully Funded Travel"
+- "Essays and Writing"
+- "MUN Conferences"
+- "Competitions and Hackathons"
+All sections auto-populate from fetched data, no manual input needed
+
+DISPLAY EACH OPPORTUNITY CARD WITH:
+- Title linked to original URL
+- Category badge colour coded
+- Source website name
+- Deadline date and days remaining
+- Short description (first 150 characters)
+- Eligibility tags (age group, country, field if specified)
+- Apply button — saves to My Applications with status Applied
+- Save/Bookmark button
+
+MY APPLICATIONS PAGE:
+- Shows all opportunities clicked Apply on
+- Status: Applied / In Review / Results Pending / Accepted / Rejected
+- User can update status with dropdown
+- Shows deadline, source, date applied
+- Personal notes field for each application
+- Export to CSV button
+- Results history so user can track wins and losses over time
+
+USER PROFILE (saved in localStorage):
+- Age / age group
+- Current country of residence
+- Original nationality
+- Field of study / major
+- Name (optional)
+All filters auto-apply based on profile. User can update profile anytime from settings icon.
+
+SEARCH:
+- Real time search across title, description, source, category
+- Filters: category, deadline range, source, type (fully funded / cash prize / certificate / travel)
+
+Everything in pure HTML CSS JavaScript. No backend, no server. Use localStorage for all user data and saved applications. Use allorigins CORS proxy for all fetches.
