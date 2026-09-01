@@ -18,8 +18,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
     savedOpportunityIds,
     stats,
     applications,
-    activeView,
-    setActiveView,
+    currentView,
+    setCurrentView,
   } = useApp();
 
   const toggleFunding = () => {
@@ -31,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
       {mobileOpen && <button className="fixed inset-0 z-40 bg-gray-900/20 lg:hidden" onClick={() => setMobileOpen?.(false)} aria-label="Close navigation" />}
       <aside className={`${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r bg-white px-5 py-5 transition-transform duration-200 lg:static`}>
         <div className="flex items-center justify-between border-b pb-5">
-          <button onClick={() => setActiveView('opportunities')} className="flex items-center gap-2.5 text-left">
+          <button onClick={() => setCurrentView('explore')} className="flex items-center gap-2.5 text-left">
             <span className="flex h-9 w-9 items-center justify-center rounded bg-[#166534] text-lg font-bold text-white">P</span>
             <span>
               <span className="block text-lg font-semibold tracking-tight text-gray-900">Pathlight</span>
@@ -44,15 +44,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
         <div className="flex-1 overflow-y-auto py-5">
           <nav className="space-y-1">
             <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Workspace</p>
-            <button onClick={() => { setActiveView('opportunities'); updateFilter('savedOnly', false); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${activeView === 'opportunities' && !filters.savedOnly ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <button onClick={() => { setCurrentView('explore'); updateFilter('savedOnly', false); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${currentView === 'explore' && !filters.savedOnly ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
               <span className="flex items-center gap-3"><Compass className="h-4 w-4" />Discover opportunities</span>
               <span className="text-xs text-gray-500">{stats.total}</span>
             </button>
-            <button onClick={() => { setActiveView('applications'); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${activeView === 'applications' ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <button onClick={() => { setCurrentView('applications'); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${currentView === 'applications' ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
               <span className="flex items-center gap-3"><Check className="h-4 w-4" />My Applications</span>
-              <span className="text-xs text-gray-500">{Object.keys(applications).length}</span>
+              <span className="text-xs text-gray-500">{applications.length}</span>
             </button>
-            <button onClick={() => { setActiveView('opportunities'); updateFilter('savedOnly', true); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${filters.savedOnly ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
+            <button onClick={() => { setCurrentView('explore'); updateFilter('savedOnly', true); setMobileOpen?.(false); }} className={`flex w-full items-center justify-between rounded-md px-3 py-2.5 text-sm ${filters.savedOnly ? 'bg-green-50 font-semibold text-[#166534]' : 'text-gray-600 hover:bg-gray-50'}`}>
               <span className="flex items-center gap-3"><Bookmark className="h-4 w-4" />Saved opportunities</span>
               <span className="text-xs text-gray-500">{savedOpportunityIds.length}</span>
             </button>

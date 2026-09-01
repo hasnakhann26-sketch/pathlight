@@ -14,8 +14,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
     setIsProfileOpen,
     savedOpportunityIds,
     applications,
-    activeView,
-    setActiveView,
+    currentView,
+    setCurrentView,
     viewMode,
     setViewMode,
   } = useApp();
@@ -46,18 +46,18 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileSidebar }) => {
 
       <nav className="flex items-center gap-1 sm:gap-4">
         <button
-          onClick={() => setActiveView('opportunities')}
-          className={`hidden px-2 py-2 text-sm font-medium transition-colors sm:block ${activeView === 'opportunities' ? 'text-[#166534]' : 'text-gray-600 hover:text-gray-900'}`}
+          onClick={() => setCurrentView('explore')}
+          className={`hidden px-2 py-2 text-sm font-medium transition-colors sm:block ${currentView === 'explore' ? 'text-[#166534]' : 'text-gray-600 hover:text-gray-900'}`}
         >
           Discover
         </button>
         <button
-          onClick={() => setActiveView('applications')}
-          className={`flex items-center gap-1.5 px-2 py-2 text-sm font-medium transition-colors ${activeView === 'applications' ? 'text-[#166534]' : 'text-gray-600 hover:text-gray-900'}`}
+          onClick={() => setCurrentView('applications')}
+          className={`flex items-center gap-1.5 px-2 py-2 text-sm font-medium transition-colors ${currentView === 'applications' ? 'text-[#166534]' : 'text-gray-600 hover:text-gray-900'}`}
         >
           <BriefcaseBusiness className="h-4 w-4" />
           <span className="hidden sm:inline">My Applications</span>
-          <span className="rounded-full bg-gray-100 px-1.5 text-[11px] text-gray-600">{Object.keys(applications).length}</span>
+          <span className="rounded-full bg-gray-100 px-1.5 text-[11px] text-gray-600">{applications.length}</span>
         </button>
         <button
           onClick={() => updateFilter('savedOnly', !filters.savedOnly)}

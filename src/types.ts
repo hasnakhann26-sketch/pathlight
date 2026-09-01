@@ -104,6 +104,31 @@ export interface Opportunity {
   sources: OpportunitySource[];
 }
 
+export type ApplicationStatus = 'Applied' | 'In Review' | 'Results Pending' | 'Accepted' | 'Rejected';
+
+export interface ApplicationHistoryEntry {
+  status: ApplicationStatus;
+  timestamp: string;
+  note?: string;
+}
+
+export interface ApplicationRecord {
+  id: string;
+  opportunityId: string;
+  opportunityTitle: string;
+  organization: string;
+  category: Category;
+  funding: FundingType;
+  officialUrl: string;
+  applicationUrl: string;
+  status: ApplicationStatus;
+  dateApplied: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  history: ApplicationHistoryEntry[];
+}
+
 export interface UserProfile {
   name?: string;
   age: number;
@@ -176,19 +201,6 @@ export type DeadlineStatus =
   | 'newly_added'
   | 'no_deadline'
   | 'expired';
-
-export type ApplicationStatus =
-  | 'Applied'
-  | 'In Review'
-  | 'Results Pending'
-  | 'Accepted'
-  | 'Rejected';
-
-export interface ApplicationRecord {
-  status: ApplicationStatus;
-  appliedAt: string;
-  notes: string;
-}
 
 export interface SourceRegistryEntry {
   sourceId: string;

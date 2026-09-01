@@ -7,8 +7,8 @@ import {
   Category,
   SourceRegistryEntry,
   GoalDiscoverySuggestion,
-  ApplicationStatus,
   ApplicationRecord,
+  ApplicationStatus,
 } from '../types';
 import { DEMO_OPPORTUNITIES } from '../data/demoOpportunities';
 import { DEMO_PROFILE } from '../data/defaultProfile';
@@ -16,34 +16,29 @@ import { SOURCE_REGISTRY } from '../data/sourceRegistry';
 import { calculateMatchScore } from '../engine/matchingEngine';
 import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
-import { fetchAggregatedOpportunities, getCachedAggregatedOpportunities, isOpportunityForProfile, AggregatorSourceStatus } from '../aggregator/aggregator';
+import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
+import { GrantsGovConnector } from '../engine/connectors';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
   matchResult: MatchScoreResult;
 }
 
+type ViewName = 'landing' | 'explore' | 'saved' | 'applications';
+
 interface AppContextType {
-  // Opportunities & Data
   opportunities: Opportunity[];
   scoredOpportunities: ScoredOpportunity[];
   filteredOpportunities: ScoredOpportunity[];
   savedOpportunityIds: string[];
   toggleSaveOpportunity: (canonicalId: string) => void;
   isSaved: (canonicalId: string) => boolean;
-  applications: Record<string, ApplicationRecord>;
-  applyToOpportunity: (canonicalId: string) => void;
-  updateApplicationStatus: (canonicalId: string, status: ApplicationStatus) => void;
-  updateApplicationNotes: (canonicalId: string, notes: string) => void;
-  isApplied: (canonicalId: string) => boolean;
 
-  // Profile
   profile: UserProfile;
   updateProfile: (newProfile: Partial<UserProfile>) => void;
   resetToDemoProfile: () => void;
   loadAlternativeProfile: (profile: UserProfile) => void;
 
-  // Modals & UI State
   selectedOpportunity: Opportunity | null;
   setSelectedOpportunity: (opp: Opportunity | null) => void;
   isProfileOpen: boolean;
@@ -53,25 +48,39 @@ interface AppContextType {
   isJsonImportOpen: boolean;
   setIsJsonImportOpen: (open: boolean) => void;
 
-  // Filters & Search
+  currentView: ViewName;
+  setCurrentView: (view: ViewName) => void;
+  activeView: ViewName;
+  setActiveView: (view: ViewName) => void;
+
   filters: FilterState;
   setFilters: React.Dispatch<React.SetStateAction<FilterState>>;
   updateFilter: <K extends keyof FilterState>(key: K, value: FilterState[K]) => void;
   resetFilters: () => void;
   setQuickCategory: (category: Category | 'All') => void;
 
-  // Goal Discovery
   goalSuggestions: GoalDiscoverySuggestion[];
 
-  // Source Registry
+  discoveryInput: string;
+  discoverySignals: DiscoverySignals | null;
+  applyDiscoveryIntent: (prompt: string) => DiscoverySignals;
+  clearDiscoveryIntent: () => void;
+
   sourceRegistry: SourceRegistryEntry[];
 
-  // JSON Import/Export
   importJsonOpportunities: (jsonStr: string) => { success: boolean; count: number; error?: string };
   exportJsonDataset: () => string;
   resetDatasetToDefault: () => void;
 
-  // Stats
+  applications: ApplicationRecord[];
+  recordApplication: (opportunity: Opportunity) => void;
+  applyToOpportunity: (canonicalId: string) => void;
+  isApplied: (canonicalId: string) => boolean;
+  updateApplication: (id: string, updates: Partial<Pick<ApplicationRecord, 'status' | 'notes' | 'dateApplied'>>) => void;
+  updateApplicationStatus: (id: string, status: ApplicationStatus) => void;
+  updateApplicationNotes: (id: string, notes: string) => void;
+  exportApplicationsCsv: () => string;
+
   stats: {
     total: number;
     eligibleCount: number;
@@ -80,27 +89,20 @@ interface AppContextType {
     closingSoonCount: number;
   };
 
-  // View Mode
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
-  activeView: 'opportunities' | 'applications';
-  setActiveView: (view: 'opportunities' | 'applications') => void;
-  aggregator: {
-    isLoading: boolean;
-    lastUpdated: string | null;
-    sourceCount: number;
-    sourceStatuses: AggregatorSourceStatus[];
-    refresh: () => Promise<void>;
-  };
+
+  fetchFromConnectors: () => Promise<void>;
+  connectorStatuses: Record<string, { status: string; message: string; recordCount: number }>;
+  isConnectorFetching: boolean;
+  lastConnectorSync: string | null;
 }
 
 const STORAGE_KEYS = {
   PROFILE: 'pathlight_user_profile_v1',
   SAVED: 'pathlight_saved_opportunities_v1',
-  APPLICATIONS: 'pathlight_applications_v1',
   CUSTOM_OPPS: 'pathlight_custom_opportunities_v1',
-  AGGREGATED: 'pathlight_aggregated_opportunities_v1',
-  AGGREGATED_UPDATED: 'pathlight_aggregated_updated_v1',
+  APPLICATIONS: 'pathlight_applications_v1',
 };
 
 const INITIAL_FILTERS: FilterState = {
@@ -114,14 +116,12 @@ const INITIAL_FILTERS: FilterState = {
   deadlineFilter: 'all',
   eligibleOnly: false,
   savedOnly: false,
-  source: '',
   sortBy: 'best_match',
 };
 
 const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 1. Profile State
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.PROFILE);
@@ -140,7 +140,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [profile]);
 
-  // 2. Saved Opportunities
   const [savedOpportunityIds, setSavedOpportunityIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SAVED);
@@ -148,26 +147,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to load saved IDs', e);
     }
-    return ['opp_ugrad_exchange_2026']; // Default saved demo item
+    return ['opp_ugrad_exchange_2026'];
   });
-
-  const [applications, setApplications] = useState<Record<string, ApplicationRecord>>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.APPLICATIONS);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to load applications', e);
-    }
-    return {};
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(applications));
-    } catch (e) {
-      console.warn('Failed to save applications', e);
-    }
-  }, [applications]);
 
   useEffect(() => {
     try {
@@ -177,7 +158,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [savedOpportunityIds]);
 
-  // 3. Opportunities Dataset (Base + Custom)
+  const [applications, setApplications] = useState<ApplicationRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.APPLICATIONS);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load applications from localStorage', e);
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(applications));
+    } catch (e) {
+      console.warn('Failed to save applications to localStorage', e);
+    }
+  }, [applications]);
+
   const [opportunities, setOpportunities] = useState<Opportunity[]>(() => {
     try {
       const savedCustom = localStorage.getItem(STORAGE_KEYS.CUSTOM_OPPS);
@@ -190,83 +191,166 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to load custom opportunities', e);
     }
-    const cached = getCachedAggregatedOpportunities();
-    return deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...cached]);
+    return deduplicateOpportunities(DEMO_OPPORTUNITIES);
   });
 
-  const [aggregatedOpportunities, setAggregatedOpportunities] = useState<Opportunity[]>(() => getCachedAggregatedOpportunities());
-  const [isAggregatorLoading, setIsAggregatorLoading] = useState(false);
-  const [aggregatorLastUpdated, setAggregatorLastUpdated] = useState<string | null>(() => {
-    try {
-      return localStorage.getItem(STORAGE_KEYS.AGGREGATED_UPDATED);
-    } catch {
-      return null;
-    }
-  });
-  const [aggregatorSourceStatuses, setAggregatorSourceStatuses] = useState<AggregatorSourceStatus[]>([]);
-
-  // 4. UI Modals
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSourceRegistryOpen, setIsSourceRegistryOpen] = useState(false);
   const [isJsonImportOpen, setIsJsonImportOpen] = useState(false);
-
-  // 5. Filters
+  const [currentView, setCurrentView] = useState<ViewName>('landing');
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
-
-  // 6. View Mode (Grid vs List)
+  const [discoveryInput, setDiscoveryInput] = useState('');
+  const [discoverySignals, setDiscoverySignals] = useState<DiscoverySignals | null>(null);
+  const discoveryProvider = useMemo(() => createDiscoveryProvider(), []);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [activeView, setActiveView] = useState<'opportunities' | 'applications'>('opportunities');
+  const [isConnectorFetching, setIsConnectorFetching] = useState(false);
+  const [lastConnectorSync, setLastConnectorSync] = useState<string | null>(null);
+  const [connectorStatuses, setConnectorStatuses] = useState<Record<string, { status: string; message: string; recordCount: number }>>({});
 
-  const refreshAggregator = async () => {
-    setIsAggregatorLoading(true);
-    try {
-      const result = await fetchAggregatedOpportunities();
-      setAggregatorSourceStatuses(result.sourceStatuses);
-      if (result.opportunities.length > 0) {
-        setAggregatedOpportunities(result.opportunities);
-        setOpportunities((prev) => deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...result.opportunities]));
-        setAggregatorLastUpdated(result.updatedAt);
-        localStorage.setItem(STORAGE_KEYS.AGGREGATED_UPDATED, result.updatedAt);
+  const activeView = currentView;
+  const setActiveView = setCurrentView;
+
+  const recordApplication = (opportunity: Opportunity) => {
+    const date = new Date().toISOString().slice(0, 10);
+    setApplications((prev) => {
+      const existing = prev.find((app) => app.opportunityId === opportunity.canonicalOpportunityId);
+      if (existing) {
+        const nextHistory = [...existing.history, { status: existing.status, timestamp: new Date().toISOString(), note: 'Application record updated in Pathlight' }];
+        return prev.map((app) =>
+          app.id === existing.id
+            ? {
+                ...app,
+                opportunityTitle: opportunity.title,
+                organization: opportunity.organization,
+                category: opportunity.category,
+                funding: opportunity.funding,
+                officialUrl: opportunity.officialSourceUrl,
+                applicationUrl: opportunity.applicationUrl,
+                updatedAt: new Date().toISOString(),
+                history: nextHistory,
+              }
+            : app
+        );
       }
-    } catch (error) {
-      console.warn('Opportunity sources could not be refreshed', error);
-    } finally {
-      setIsAggregatorLoading(false);
+
+      const record: ApplicationRecord = {
+        id: `app_${opportunity.canonicalOpportunityId}_${Date.now()}`,
+        opportunityId: opportunity.canonicalOpportunityId,
+        opportunityTitle: opportunity.title,
+        organization: opportunity.organization,
+        category: opportunity.category,
+        funding: opportunity.funding,
+        officialUrl: opportunity.officialSourceUrl,
+        applicationUrl: opportunity.applicationUrl,
+        status: 'Applied',
+        dateApplied: date,
+        notes: '',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        history: [{ status: 'Applied', timestamp: new Date().toISOString(), note: 'Application tracked from Pathlight' }],
+      };
+
+      return [record, ...prev];
+    });
+  };
+
+  const applyToOpportunity = (canonicalId: string) => {
+    const opportunity = opportunities.find((opp) => opp.canonicalOpportunityId === canonicalId);
+    if (opportunity) {
+      recordApplication(opportunity);
     }
   };
 
-  useEffect(() => {
-    void refreshAggregator();
-  }, []);
+  const isApplied = (canonicalId: string) => applications.some((app) => app.opportunityId === canonicalId);
 
-  // Helper actions
+  const updateApplication = (id: string, updates: Partial<Pick<ApplicationRecord, 'status' | 'notes' | 'dateApplied'>>) => {
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (app.id !== id) return app;
+        const nextStatus = updates.status ?? app.status;
+        const nextDate = updates.dateApplied ?? app.dateApplied;
+        const nextNotes = updates.notes ?? app.notes;
+        const nextHistory = updates.status && updates.status !== app.status
+          ? [...app.history, { status: updates.status, timestamp: new Date().toISOString(), note: `Status updated to ${updates.status}` }]
+          : app.history;
+
+        return {
+          ...app,
+          status: nextStatus,
+          dateApplied: nextDate,
+          notes: nextNotes,
+          updatedAt: new Date().toISOString(),
+          history: nextHistory,
+        };
+      })
+    );
+  };
+
+  const updateApplicationStatus = (id: string, status: ApplicationStatus) => {
+    updateApplication(id, { status });
+  };
+
+  const updateApplicationNotes = (id: string, notes: string) => {
+    updateApplication(id, { notes });
+  };
+
+  const exportApplicationsCsv = () => {
+    const headers = ['Title', 'Organization', 'Category', 'Status', 'Date Applied', 'Notes'];
+    const rows = applications.map((app) => [
+      app.opportunityTitle,
+      app.organization,
+      app.category,
+      app.status,
+      app.dateApplied,
+      app.notes,
+    ]);
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    return csv;
+  };
+
+  const fetchFromConnectors = async () => {
+    if (isConnectorFetching) return;
+
+    setIsConnectorFetching(true);
+    const statuses: Record<string, { status: string; message: string; recordCount: number }> = {};
+
+    try {
+      const grantsConnector = new GrantsGovConnector();
+      const grantsResult = await grantsConnector.fetch({ limit: 50 });
+
+      statuses['grants_gov'] = {
+        status: grantsResult.sourceStatus,
+        message: grantsResult.message,
+        recordCount: grantsResult.fetchedCount,
+      };
+
+      if (grantsResult.success && grantsResult.records.length > 0) {
+        setOpportunities((prev) => deduplicateOpportunities([...prev, ...grantsResult.records]));
+      }
+    } catch (error) {
+      console.warn('Connector fetch error:', error);
+      statuses['grants_gov'] = {
+        status: 'ERROR',
+        message: `Connector error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        recordCount: 0,
+      };
+    } finally {
+      setConnectorStatuses(statuses);
+      setLastConnectorSync(new Date().toISOString());
+      setIsConnectorFetching(false);
+    }
+  };
+
   const toggleSaveOpportunity = (canonicalId: string) => {
     setSavedOpportunityIds((prev) =>
-      prev.includes(canonicalId)
-        ? prev.filter((id) => id !== canonicalId)
-        : [...prev, canonicalId]
+      prev.includes(canonicalId) ? prev.filter((id) => id !== canonicalId) : [...prev, canonicalId]
     );
   };
 
   const isSaved = (canonicalId: string) => savedOpportunityIds.includes(canonicalId);
-
-  const applyToOpportunity = (canonicalId: string) => {
-    setApplications((prev) => ({
-      ...prev,
-      [canonicalId]: prev[canonicalId] || { status: 'Applied', appliedAt: new Date().toISOString(), notes: '' },
-    }));
-  };
-
-  const updateApplicationStatus = (canonicalId: string, status: ApplicationStatus) => {
-    setApplications((prev) => ({ ...prev, [canonicalId]: { ...prev[canonicalId], status } }));
-  };
-
-  const updateApplicationNotes = (canonicalId: string, notes: string) => {
-    setApplications((prev) => ({ ...prev, [canonicalId]: { ...prev[canonicalId], notes } }));
-  };
-
-  const isApplied = (canonicalId: string) => Boolean(applications[canonicalId]);
 
   const updateProfile = (updates: Partial<UserProfile>) => {
     setProfile((prev) => ({ ...prev, ...updates }));
@@ -286,6 +370,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetFilters = () => {
     setFilters(INITIAL_FILTERS);
+    setDiscoveryInput('');
+    setDiscoverySignals(null);
+  };
+
+  const applyDiscoveryIntent = (prompt: string) => {
+    const safePrompt = prompt.trim();
+    if (!safePrompt) {
+      setDiscoveryInput('');
+      setDiscoverySignals(null);
+      return {
+        fundingTypes: [],
+        categories: [],
+        searchTerms: [],
+        worldwideOnly: false,
+        freeApplicationOnly: false,
+        noMajorRestriction: false,
+        preferredCountries: [],
+        summary: 'Pathlight is ready to understand a new opportunity brief.',
+        hardEligibilityGuard: false,
+      };
+    }
+
+    const signals = discoveryProvider.interpret(safePrompt);
+    setDiscoveryInput(safePrompt);
+    setDiscoverySignals(signals);
+
+    setFilters((prev) => {
+      const mergedSearchTerms = Array.from(new Set([prev.searchQuery.trim(), ...signals.searchTerms].filter(Boolean))).join(' ');
+      const mergedFundingTypes = Array.from(new Set([...prev.fundingTypes, ...signals.fundingTypes]));
+      const mergedCategories = Array.from(new Set([...prev.selectedCategories, ...signals.categories]));
+      const mergedCountry = prev.country || (signals.preferredCountries[0] ?? '');
+
+      return {
+        ...prev,
+        searchQuery: mergedSearchTerms,
+        selectedCategories: mergedCategories,
+        fundingTypes: mergedFundingTypes,
+        worldwideOnly: prev.worldwideOnly || signals.worldwideOnly,
+        freeApplicationOnly: prev.freeApplicationOnly || signals.freeApplicationOnly,
+        country: mergedCountry,
+      };
+    });
+
+    return signals;
+  };
+
+  const clearDiscoveryIntent = () => {
+    setDiscoveryInput('');
+    setDiscoverySignals(null);
   };
 
   const setQuickCategory = (cat: Category | 'All') => {
@@ -296,7 +429,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // 6. Transparent Score Calculations for all opportunities
   const scoredOpportunities = useMemo<ScoredOpportunity[]>(() => {
     return opportunities.map((opp) => ({
       opportunity: opp,
@@ -304,11 +436,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, [opportunities, profile]);
 
-  // 7. Filter & Search Pipeline
   const filteredOpportunities = useMemo<ScoredOpportunity[]>(() => {
     let list = [...scoredOpportunities];
 
-    // Search query filter (matches title, org, field, skills, description, country)
     if (filters.searchQuery.trim()) {
       const q = filters.searchQuery.toLowerCase().trim();
       list = list.filter(({ opportunity: o }) => {
@@ -323,19 +453,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
     }
 
-    // Automatic profile matching for live and imported records.
-    list = list.filter(({ opportunity: o }) => isOpportunityForProfile(o, profile));
-
-    if (filters.source) {
-      list = list.filter(({ opportunity: o }) => o.sources.some((source) => source.sourceName === filters.source));
-    }
-
-    // Category filter
     if (filters.selectedCategories.length > 0) {
       list = list.filter(({ opportunity: o }) => filters.selectedCategories.includes(o.category));
     }
 
-    // Country / Worldwide
     if (filters.worldwideOnly) {
       list = list.filter(({ opportunity: o }) => o.worldwide || o.modality === 'online');
     } else if (filters.country) {
@@ -343,32 +464,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       list = list.filter(({ opportunity: o }) => o.country.toLowerCase().includes(c) || o.worldwide);
     }
 
-    // Modalities
     if (filters.modalities.length > 0) {
       list = list.filter(({ opportunity: o }) => filters.modalities.includes(o.modality));
     }
 
-    // Funding types
     if (filters.fundingTypes.length > 0) {
       list = list.filter(({ opportunity: o }) => filters.fundingTypes.includes(o.funding));
     }
 
-    // Free application fee only
     if (filters.freeApplicationOnly) {
       list = list.filter(({ opportunity: o }) => o.applicationFee === 0 || o.applicationFee === undefined);
     }
 
-    // Eligible Only toggle
     if (filters.eligibleOnly) {
       list = list.filter(({ matchResult }) => matchResult.isEligible);
     }
 
-    // Saved Only toggle
     if (filters.savedOnly) {
       list = list.filter(({ opportunity: o }) => savedOpportunityIds.includes(o.canonicalOpportunityId));
     }
 
-    // Deadline Filters
     if (filters.deadlineFilter !== 'all') {
       const now = new Date();
       list = list.filter(({ opportunity: o }) => {
@@ -378,31 +493,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const dl = new Date(o.deadline);
         const diffDays = Math.ceil((dl.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-        if (diffDays < 0) {
-          return false; // exclude expired for these filters
-        }
-        if (filters.deadlineFilter === 'closing_soon') {
-          return diffDays >= 0 && diffDays <= 7;
-        }
-        if (filters.deadlineFilter === 'closing_this_month') {
-          return diffDays >= 0 && diffDays <= 30;
-        }
-        if (filters.deadlineFilter === 'opening_soon') {
-          if (!o.openingDate) return false;
+        if (diffDays < 0) return false;
+        if (filters.deadlineFilter === 'closing_soon') return diffDays <= 7;
+        if (filters.deadlineFilter === 'closing_this_month') return diffDays <= 30;
+        if (filters.deadlineFilter === 'opening_soon' && o.openingDate) {
           const op = new Date(o.openingDate);
           return op.getTime() > now.getTime();
         }
-        if (filters.deadlineFilter === 'no_deadline') {
-          return false;
-        }
+        if (filters.deadlineFilter === 'no_deadline') return false;
         return true;
       });
     }
 
-    // Sorting
     list.sort((a, b) => {
       if (filters.sortBy === 'best_match') {
-        // First by score descending, then by eligibility
         if (a.matchResult.isEligible !== b.matchResult.isEligible) {
           return a.matchResult.isEligible ? -1 : 1;
         }
@@ -426,17 +530,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return list;
   }, [scoredOpportunities, filters, savedOpportunityIds]);
 
-  // 8. Goal Discovery Suggestions ("You didn't know these existed")
   const goalSuggestions = useMemo<GoalDiscoverySuggestion[]>(() => {
-    return generateGoalDiscoverySuggestions(
-      filters.searchQuery,
-      filters.selectedCategories,
-      opportunities,
-      profile
-    );
+    return generateGoalDiscoverySuggestions(filters.searchQuery, filters.selectedCategories, opportunities, profile);
   }, [filters.searchQuery, filters.selectedCategories, opportunities, profile]);
 
-  // 9. Statistics
   const stats = useMemo(() => {
     const total = opportunities.length;
     const eligibleCount = scoredOpportunities.filter((s) => s.matchResult.isEligible).length;
@@ -451,16 +548,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return diffDays >= 0 && diffDays <= 7;
     }).length;
 
-    return {
-      total,
-      eligibleCount,
-      fullyFundedCount,
-      savedCount,
-      closingSoonCount,
-    };
+    return { total, eligibleCount, fullyFundedCount, savedCount, closingSoonCount };
   }, [opportunities, scoredOpportunities, savedOpportunityIds]);
 
-  // 10. JSON Import/Export handlers
   const importJsonOpportunities = (jsonStr: string) => {
     try {
       const parsed = JSON.parse(jsonStr);
@@ -470,7 +560,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return { success: false, count: 0, error: 'JSON array is empty.' };
       }
 
-      // Basic schema check
       const validItems: Opportunity[] = [];
       for (const item of list) {
         if (!item.title || !item.organization || !item.category) {
@@ -480,6 +569,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             error: `Item missing required fields: title, organization, or category (id: ${item.canonicalOpportunityId || 'unknown'}).`,
           };
         }
+
         validItems.push({
           canonicalOpportunityId: item.canonicalOpportunityId || `opp_custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           title: item.title,
@@ -516,17 +606,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           eligibilityExplanation: item.eligibilityExplanation,
           requiredDocuments: item.requiredDocuments,
           verificationStatus: item.verificationStatus || 'verified',
-          lastVerified: item.lastVerified || new Date().toISOString().split('T')[0],
+          lastVerified: item.lastVerified || new Date().toISOString().slice(0, 10),
           sourceCount: item.sourceCount || 1,
           duplicateNotes: item.duplicateNotes,
-          sources: item.sources || [
-            {
-              sourceName: 'Direct JSON Import',
-              sourceType: 'official',
-              sourceUrl: item.officialSourceUrl || 'https://pathlight.org',
-              retrievedAt: new Date().toISOString().split('T')[0],
-            },
-          ],
+          sources: item.sources || [{
+            sourceName: 'Direct JSON Import',
+            sourceType: 'official',
+            sourceUrl: item.officialSourceUrl || 'https://pathlight.org',
+            retrievedAt: new Date().toISOString(),
+          }],
         });
       }
 
@@ -546,9 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const exportJsonDataset = () => {
-    return JSON.stringify(opportunities, null, 2);
-  };
+  const exportJsonDataset = () => JSON.stringify(opportunities, null, 2);
 
   const resetDatasetToDefault = () => {
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_OPPS);
@@ -564,11 +650,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         savedOpportunityIds,
         toggleSaveOpportunity,
         isSaved,
-        applications,
-        applyToOpportunity,
-        updateApplicationStatus,
-        isApplied,
-        updateApplicationNotes,
         profile,
         updateProfile,
         resetToDemoProfile,
@@ -581,28 +662,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsSourceRegistryOpen,
         isJsonImportOpen,
         setIsJsonImportOpen,
+        currentView,
+        setCurrentView,
+        activeView,
+        setActiveView,
         filters,
         setFilters,
         updateFilter,
         resetFilters,
         setQuickCategory,
         goalSuggestions,
+        discoveryInput,
+        discoverySignals,
+        applyDiscoveryIntent,
+        clearDiscoveryIntent,
         sourceRegistry: SOURCE_REGISTRY,
         importJsonOpportunities,
         exportJsonDataset,
         resetDatasetToDefault,
+        applications,
+        recordApplication,
+        applyToOpportunity,
+        isApplied,
+        updateApplication,
+        updateApplicationStatus,
+        updateApplicationNotes,
+        exportApplicationsCsv,
         stats,
         viewMode,
         setViewMode,
-        activeView,
-        setActiveView,
-        aggregator: {
-          isLoading: isAggregatorLoading,
-          lastUpdated: aggregatorLastUpdated,
-          sourceCount: aggregatedOpportunities.length,
-          sourceStatuses: aggregatorSourceStatuses,
-          refresh: refreshAggregator,
-        },
+        fetchFromConnectors,
+        connectorStatuses,
+        isConnectorFetching,
+        lastConnectorSync,
       }}
     >
       {children}

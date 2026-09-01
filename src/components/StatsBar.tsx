@@ -12,84 +12,78 @@ export const StatsBar: React.FC = () => {
   const { stats, profile, setIsProfileOpen, filters, updateFilter } = useApp();
 
   return (
-    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6 p-3.5 rounded-xl bg-[#0a0514] border border-violet-900/30 text-xs">
-      {/* Active Profile Summary Tag */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-violet-950/40 border border-violet-500/20 text-violet-300">
-          <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+    <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-white p-3.5 text-xs shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-emerald-800">
+          <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
           <span>Active Profile:</span>
-          <strong className="font-semibold text-white">
+          <strong className="font-semibold text-slate-900">
             {profile.field} ({profile.degree || profile.educationLevel}, Yr {profile.year})
           </strong>
         </div>
 
-        <span className="text-slate-600 hidden sm:inline">•</span>
+        <span className="hidden text-slate-400 sm:inline">•</span>
 
-        <div className="flex items-center gap-1.5 text-slate-400">
+        <div className="flex items-center gap-1.5 text-slate-600">
           <span>{profile.country}</span>
           <span>(Budget: ${profile.budget})</span>
         </div>
 
         <button
           onClick={() => setIsProfileOpen(true)}
-          className="inline-flex items-center gap-1 text-violet-400 hover:text-violet-300 underline font-medium ml-1 transition-colors"
+          className="ml-1 inline-flex items-center gap-1 font-medium text-emerald-700 underline-offset-2 hover:text-emerald-800 hover:underline"
         >
-          <Edit3 className="w-3 h-3" />
+          <Edit3 className="h-3 w-3" />
           <span>Edit Profile</span>
         </button>
       </div>
 
-      {/* Quick Real-Time Metrics */}
-      <div className="flex items-center gap-2 sm:gap-4 overflow-x-auto pb-1 md:pb-0">
-        {/* Total */}
-        <div className="flex items-center gap-1.5 text-slate-400 whitespace-nowrap">
-          <span className="font-semibold text-white">{stats.total}</span>
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 sm:gap-4">
+        <div className="flex items-center gap-1.5 whitespace-nowrap text-slate-600">
+          <span className="font-semibold text-slate-900">{stats.total}</span>
           <span>Total</span>
         </div>
 
-        <span className="text-slate-700">|</span>
+        <span className="text-slate-300">|</span>
 
-        {/* Eligible Quick Filter */}
         <button
           onClick={() => updateFilter('eligibleOnly', !filters.eligibleOnly)}
-          className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-all whitespace-nowrap ${
+          className={`flex items-center gap-1.5 rounded-md px-2 py-0.5 whitespace-nowrap transition-all ${
             filters.eligibleOnly
-              ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-600/60 font-semibold'
-              : 'text-slate-400 hover:text-emerald-400'
+              ? 'border border-emerald-200 bg-emerald-50 font-semibold text-emerald-700'
+              : 'text-slate-600 hover:text-emerald-700'
           }`}
         >
-          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
           <span>
-            <strong className="text-white">{stats.eligibleCount}</strong> Eligible
+            <strong className="text-slate-900">{stats.eligibleCount}</strong> Eligible
           </span>
         </button>
 
-        <span className="text-slate-700">|</span>
+        <span className="text-slate-300">|</span>
 
-        {/* Fully Funded */}
-        <div className="flex items-center gap-1.5 text-slate-400 whitespace-nowrap">
-          <DollarSign className="w-3.5 h-3.5 text-violet-400" />
+        <div className="flex items-center gap-1.5 whitespace-nowrap text-slate-600">
+          <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
           <span>
-            <strong className="text-slate-200">{stats.fullyFundedCount}</strong> Fully Funded
+            <strong className="text-slate-900">{stats.fullyFundedCount}</strong> Fully Funded
           </span>
         </div>
 
-        <span className="text-slate-700">|</span>
+        <span className="text-slate-300">|</span>
 
-        {/* Closing Soon */}
         <button
           onClick={() =>
             updateFilter('deadlineFilter', filters.deadlineFilter === 'closing_soon' ? 'all' : 'closing_soon')
           }
-          className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-all whitespace-nowrap ${
+          className={`flex items-center gap-1.5 rounded-md px-2 py-0.5 whitespace-nowrap transition-all ${
             filters.deadlineFilter === 'closing_soon'
-              ? 'bg-amber-950/80 text-amber-300 border border-amber-600/60 font-semibold'
-              : 'text-slate-400 hover:text-amber-400'
+              ? 'border border-amber-200 bg-amber-50 font-semibold text-amber-700'
+              : 'text-slate-600 hover:text-amber-700'
           }`}
         >
-          <Clock className="w-3.5 h-3.5 text-amber-400" />
+          <Clock className="h-3.5 w-3.5 text-amber-600" />
           <span>
-            <strong className="text-slate-200">{stats.closingSoonCount}</strong> Closing Soon
+            <strong className="text-slate-900">{stats.closingSoonCount}</strong> Closing Soon
           </span>
         </button>
       </div>
