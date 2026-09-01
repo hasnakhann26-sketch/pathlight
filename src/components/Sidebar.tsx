@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
 
   return (
     <>
-      {mobileOpen && <button className="fixed inset-0 z-40 bg-gray-900/20 lg:hidden" onClick={() => setMobileOpen?.(false)} aria-label="Close navigation" />}
+      {mobileOpen && <button className="fixed inset-0 z-40 bg-gray-200/60 lg:hidden" onClick={() => setMobileOpen?.(false)} aria-label="Close navigation" />}
       <aside className={`${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col border-r bg-white px-5 py-5 transition-transform duration-200 lg:static`}>
         <div className="flex items-center justify-between border-b pb-5">
           <button onClick={() => setCurrentView('explore')} className="flex items-center gap-2.5 text-left">

@@ -11,7 +11,7 @@ export function calculateDeadlineStatus(deadlineStr?: string, openingDateStr?: s
     return {
       status: 'no_deadline',
       label: 'Rolling / No Deadline',
-      badgeColor: 'bg-zinc-800/80 text-zinc-300 border-zinc-700',
+      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     };
   }
 
@@ -25,7 +25,7 @@ export function calculateDeadlineStatus(deadlineStr?: string, openingDateStr?: s
       status: 'expired',
       daysRemaining: diffDays,
       label: 'Deadline Passed',
-      badgeColor: 'bg-red-950/60 text-red-400 border-red-800/50',
+      badgeColor: 'bg-red-50 text-red-700 border-red-200',
     };
   }
 
@@ -34,7 +34,7 @@ export function calculateDeadlineStatus(deadlineStr?: string, openingDateStr?: s
       status: 'closing_today',
       daysRemaining: 0,
       label: 'Closing Today!',
-      badgeColor: 'bg-rose-950/80 text-rose-300 border-rose-600 animate-pulse',
+      badgeColor: 'bg-rose-50 text-rose-700 border-rose-200 animate-pulse',
     };
   }
 
@@ -43,7 +43,7 @@ export function calculateDeadlineStatus(deadlineStr?: string, openingDateStr?: s
       status: 'closing_soon',
       daysRemaining: diffDays,
       label: `Closing in ${diffDays} day${diffDays === 1 ? '' : 's'}`,
-      badgeColor: 'bg-amber-950/80 text-amber-300 border-amber-600/70',
+      badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
     };
   }
 
@@ -52,7 +52,7 @@ export function calculateDeadlineStatus(deadlineStr?: string, openingDateStr?: s
       status: 'closing_this_month',
       daysRemaining: diffDays,
       label: `Closing in ${diffDays} days`,
-      badgeColor: 'bg-violet-950/70 text-violet-300 border-violet-700/60',
+      badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     };
   }
 
@@ -63,7 +63,7 @@ export function calculateDeadlineStatus(deadlineStr?: string, openingDateStr?: s
         status: 'opening_soon',
         daysRemaining: diffDays,
         label: `Opens ${openingDateStr}`,
-        badgeColor: 'bg-sky-950/60 text-sky-300 border-sky-700/60',
+        badgeColor: 'bg-sky-50 text-sky-700 border-sky-200',
       };
     }
   }
@@ -72,7 +72,7 @@ export function calculateDeadlineStatus(deadlineStr?: string, openingDateStr?: s
     status: 'newly_added',
     daysRemaining: diffDays,
     label: `Deadline: ${deadlineStr}`,
-    badgeColor: 'bg-zinc-800/80 text-zinc-300 border-zinc-700',
+    badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
   };
 }
 

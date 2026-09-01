@@ -18,6 +18,7 @@ import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
 import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
 import { GrantsGovConnector } from '../engine/connectors';
+import { fetchRSSOpportunities, getCachedRSSOpportunities, shouldRefreshRSSCache } from '../engine/RSSAggregator';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -89,6 +90,8 @@ interface AppContextType {
     closingSoonCount: number;
   };
 
+  rssStatus: { isLoading: boolean; lastUpdated: string | null; sourceStatus: Array<{ name: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number }> };
+
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
 
@@ -116,6 +119,7 @@ const INITIAL_FILTERS: FilterState = {
   deadlineFilter: 'all',
   eligibleOnly: false,
   savedOnly: false,
+  source: '',
   sortBy: 'best_match',
 };
 
@@ -207,6 +211,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isConnectorFetching, setIsConnectorFetching] = useState(false);
   const [lastConnectorSync, setLastConnectorSync] = useState<string | null>(null);
   const [connectorStatuses, setConnectorStatuses] = useState<Record<string, { status: string; message: string; recordCount: number }>>({});
+  const [rssStatus, setRssStatus] = useState({
+    isLoading: false,
+    lastUpdated: null as string | null,
+    sourceStatus: [] as Array<{ name: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number }>,
+  });
 
   const activeView = currentView;
   const setActiveView = setCurrentView;
@@ -343,6 +352,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsConnectorFetching(false);
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrateRss = async () => {
+      setRssStatus((prev) => ({ ...prev, isLoading: true }));
+
+      const cached = getCachedRSSOpportunities();
+      const shouldRefresh = shouldRefreshRSSCache();
+
+      if (!cancelled && cached.length > 0 && !shouldRefresh) {
+        setOpportunities((prev) => deduplicateOpportunities([...prev, ...cached]));
+        setRssStatus({
+          isLoading: false,
+          lastUpdated: new Date().toISOString(),
+          sourceStatus: [],
+        });
+        return;
+      }
+
+      try {
+        const result = await fetchRSSOpportunities();
+        if (cancelled) return;
+
+        setOpportunities((prev) => deduplicateOpportunities([...prev, ...result.opportunities]));
+        setRssStatus({
+          isLoading: false,
+          lastUpdated: result.updatedAt,
+          sourceStatus: result.sourceStatuses,
+        });
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('RSS feed sync failed:', error);
+          setRssStatus((prev) => ({ ...prev, isLoading: false, sourceStatus: [] }));
+        }
+      }
+    };
+
+    hydrateRss();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const toggleSaveOpportunity = (canonicalId: string) => {
     setSavedOpportunityIds((prev) =>
@@ -695,6 +747,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         connectorStatuses,
         isConnectorFetching,
         lastConnectorSync,
+        rssStatus,
       }}
     >
       {children}

@@ -11,7 +11,7 @@ import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { ProfileModal } from './components/ProfileModal';
 import { SourceRegistryModal } from './components/SourceRegistryModal';
 import { JsonImportModal } from './components/JsonImportModal';
-import { Compass, RotateCcw, Search, ShieldCheck } from 'lucide-react';
+import { Compass, RotateCcw, Search, ShieldCheck, Globe2, ArrowRight, Sparkles } from 'lucide-react';
 
 const MainView: React.FC = () => {
   const {
@@ -78,6 +78,30 @@ const MainView: React.FC = () => {
               <FilterBar />
             </div>
 
+            <div className="grid gap-4 lg:grid-cols-3">
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <Globe2 className="h-4 w-4 text-emerald-600" />
+                  Global Opportunities
+                </div>
+                <p className="text-xs text-slate-600">International calls and worldwide-access programs surfaced from live and verified feeds.</p>
+              </section>
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <Sparkles className="h-4 w-4 text-emerald-600" />
+                  Trending by Goal
+                </div>
+                <p className="text-xs text-slate-600">Goal-based paths for research, exchange, leadership, and funded travel experiences.</p>
+              </section>
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <ArrowRight className="h-4 w-4 text-emerald-600" />
+                  Fast Apply Matches
+                </div>
+                <p className="text-xs text-slate-600">The strongest fits for your profile and current funding preferences are prioritized.</p>
+              </section>
+            </div>
+
             <div className="flex items-center justify-between gap-4 text-xs text-slate-600">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-slate-900">
@@ -142,7 +166,7 @@ const MainView: React.FC = () => {
                     <Compass className="w-4 h-4" />
                   </div>
                   <span className="font-bold text-slate-900">Pathlight</span>
-                  <span className="text-slate-400">•</span>
+                  <span className="text-gray-500">•</span>
                   <span className="text-[11px] text-slate-500">Opportunity discovery for students and early-career professionals</span>
                 </div>
 

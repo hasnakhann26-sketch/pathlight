@@ -36,7 +36,7 @@ export const ApplicationsPage: React.FC = () => {
           </button>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <FileText className="mx-auto h-10 w-10 text-slate-400" />
+          <FileText className="mx-auto h-10 w-10 text-gray-500" />
           <h3 className="mt-4 text-lg font-semibold text-slate-900">No applications yet</h3>
           <p className="mt-2 text-sm text-slate-600">
             When you click Apply on an opportunity, it will appear here with status tracking and notes.

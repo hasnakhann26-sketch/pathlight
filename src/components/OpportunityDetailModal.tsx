@@ -28,24 +28,23 @@ export const OpportunityDetailModal: React.FC = () => {
   const saved = isSaved(selectedOpportunity.canonicalOpportunityId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-200/70 backdrop-blur-md overflow-y-auto animate-in fade-in duration-150">
       <div
-        className="relative w-full max-w-4xl rounded-3xl bg-[#0a0514] border border-violet-500/20 shadow-2xl shadow-violet-950/50 text-slate-200 overflow-hidden my-8"
+        className="relative w-full max-w-4xl rounded-3xl border border-slate-200 bg-white text-slate-800 overflow-hidden my-8 shadow-2xl shadow-slate-200/80"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Strip */}
-        <div className="flex items-center justify-between p-5 sm:p-6 border-b border-violet-900/30 bg-[#050308]/80">
+        <div className="flex items-center justify-between border-b border-slate-200 bg-[#f8faf8] p-5 sm:p-6">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="px-2.5 py-1 rounded-lg bg-violet-500/20 text-violet-300 text-xs font-bold border border-violet-500/20">
+            <span className="rounded-lg border border-emerald-200 bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">
               {selectedOpportunity.category}
             </span>
             {selectedOpportunity.subcategory && (
-              <span className="text-xs text-slate-400 font-medium">
+              <span className="text-xs font-medium text-slate-500">
                 {selectedOpportunity.subcategory}
               </span>
             )}
-            <span className="text-slate-600">•</span>
-            <div className="flex items-center gap-1 text-xs text-emerald-400 font-medium">
+            <span className="text-gray-500">•</span>
+            <div className="flex items-center gap-1 text-xs font-medium text-emerald-700">
               <ShieldCheck className="w-4 h-4" />
               <span>Verified Official Record</span>
             </div>
@@ -54,10 +53,10 @@ export const OpportunityDetailModal: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => toggleSaveOpportunity(selectedOpportunity.canonicalOpportunityId)}
-              className={`p-2 rounded-xl border transition-all ${
+              className={`rounded-xl border p-2 transition-all ${
                 saved
-                  ? 'bg-violet-600 text-white border-violet-500 shadow-sm'
-                  : 'bg-slate-900 text-slate-300 hover:text-white border-white/5 hover:bg-slate-800'
+                  ? 'border-emerald-200 bg-emerald-600 text-white shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800'
               }`}
               title={saved ? 'Saved' : 'Save opportunity'}
             >
@@ -66,7 +65,7 @@ export const OpportunityDetailModal: React.FC = () => {
 
             <button
               onClick={() => setSelectedOpportunity(null)}
-              className="p-2 rounded-xl bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800 border border-white/5 transition-colors"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
             >
               <X className="w-4 h-4" />
             </button>
@@ -77,24 +76,23 @@ export const OpportunityDetailModal: React.FC = () => {
         <div className="p-5 sm:p-8 space-y-6 max-h-[75vh] overflow-y-auto">
           {/* Main Title & Organization */}
           <div>
-            <div className="text-sm font-semibold text-slate-400 mb-1">
+            <div className="text-sm font-semibold text-gray-500 mb-1">
               {selectedOpportunity.organization}
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
               {selectedOpportunity.title}
             </h2>
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 rounded-2xl bg-[#0f0a1d] border border-violet-500/10">
-            {/* Match Score */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-col">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Match Score
               </span>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Sparkles className="w-4 h-4 text-violet-400" />
-                <span className="text-lg font-extrabold text-white">
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <Sparkles className="h-4 w-4 text-emerald-600" />
+                <span className="text-lg font-extrabold text-slate-900">
                   {matchResult.totalScore}%
                 </span>
               </div>
@@ -102,12 +100,12 @@ export const OpportunityDetailModal: React.FC = () => {
 
             {/* Funding */}
             <div className="flex flex-col">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+              <span className="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
                 Funding
               </span>
               <div className="flex items-center gap-1 mt-0.5">
-                <DollarSign className="w-4 h-4 text-emerald-400" />
-                <span className="text-sm font-bold capitalize text-emerald-300">
+                <DollarSign className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm font-bold capitalize text-emerald-700">
                   {selectedOpportunity.funding.replace('_', ' ')}
                 </span>
               </div>
@@ -115,12 +113,12 @@ export const OpportunityDetailModal: React.FC = () => {
 
             {/* Location */}
             <div className="flex flex-col">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
                 Location
               </span>
-              <div className="flex items-center gap-1 mt-0.5">
-                <MapPin className="w-4 h-4 text-indigo-400" />
-                <span className="text-sm font-medium text-slate-200 truncate">
+              <div className="mt-0.5 flex items-center gap-1">
+                <MapPin className="h-4 w-4 text-emerald-600" />
+                <span className="truncate text-sm font-medium text-slate-700">
                   {selectedOpportunity.worldwide ? 'Worldwide' : selectedOpportunity.country}
                 </span>
               </div>
@@ -128,12 +126,12 @@ export const OpportunityDetailModal: React.FC = () => {
 
             {/* Deadline */}
             <div className="flex flex-col">
-              <span className="text-[11px] text-slate-400 uppercase tracking-wider font-semibold">
+              <span className="text-[11px] text-gray-500 uppercase tracking-wider font-semibold">
                 Deadline Status
               </span>
               <div className="flex items-center gap-1 mt-0.5">
-                <Clock className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-semibold text-amber-300">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <span className="text-sm font-semibold text-amber-700">
                   {deadlineInfo.label}
                 </span>
               </div>
@@ -141,20 +139,20 @@ export const OpportunityDetailModal: React.FC = () => {
           </div>
 
           {/* Section 1: Transparent Match Scoring Breakdown */}
-          <div className="p-5 rounded-2xl bg-[#0f0a1d] border border-violet-500/20 space-y-4">
+          <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-violet-400" />
-                <h3 className="text-sm font-bold uppercase tracking-wider text-violet-200">
+                <Sparkles className="h-4 w-4 text-emerald-600" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
                   Transparent Score Breakdown ({matchResult.totalScore}/100 pts)
                 </h3>
               </div>
-              <span className="text-xs text-slate-400 italic">
+              <span className="text-xs text-gray-500 italic">
                 Evaluated against active profile
               </span>
             </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed font-medium">
+            <p className="text-xs text-gray-600 leading-relaxed font-medium">
               {matchResult.matchSummary}
             </p>
 
@@ -163,18 +161,18 @@ export const OpportunityDetailModal: React.FC = () => {
               {matchResult.factors.map((factor, idx) => (
                 <div key={idx} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-200">{factor.name}</span>
-                    <span className="font-mono text-slate-300">
+                    <span className="font-semibold text-gray-700">{factor.name}</span>
+                    <span className="font-mono text-gray-600">
                       <strong>{factor.score}</strong> / {factor.maxScore} pts
                     </span>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
                     <div
-                      className="h-full bg-gradient-to-r from-violet-600 to-indigo-500 transition-all duration-300"
+                      className="h-full bg-gradient-to-r from-emerald-500 to-green-500 transition-all duration-300"
                       style={{ width: `${(factor.score / factor.maxScore) * 100}%` }}
                     />
                   </div>
-                  <div className="text-[11px] text-slate-400">{factor.description}</div>
+                  <div className="text-[11px] text-gray-500">{factor.description}</div>
                 </div>
               ))}
             </div>
@@ -182,8 +180,8 @@ export const OpportunityDetailModal: React.FC = () => {
 
           {/* Section 2: Deterministic Eligibility Matrix */}
           <div className="space-y-3">
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-              <GraduationCap className="w-4 h-4 text-violet-400" />
+            <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-700">
+              <GraduationCap className="h-4 w-4 text-emerald-600" />
               <span>Eligibility Evaluation Matrix</span>
             </h3>
 
@@ -196,13 +194,13 @@ export const OpportunityDetailModal: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {matchResult.eligibility.matchedRequirements.map((req, i) => (
-                    <div key={i} className="p-2 rounded-lg bg-[#0a0514] border border-emerald-900/40">
+                    <div key={i} className="rounded-lg border border-emerald-200 bg-emerald-50 p-2">
                       <div className="font-medium text-emerald-300">{req.criterion}</div>
-                      <div className="text-slate-400 text-[11px] mt-0.5">
-                        Required: <span className="text-slate-200">{req.requiredValue}</span>
+                      <div className="text-gray-500 text-[11px] mt-0.5">
+                        Required: <span className="text-gray-700">{req.requiredValue}</span>
                       </div>
-                      <div className="text-slate-400 text-[11px]">
-                        Your Profile: <span className="text-emerald-400 font-semibold">{req.userValue}</span>
+                      <div className="text-gray-500 text-[11px]">
+                        Your Profile: <span className="text-emerald-700 font-semibold">{req.userValue}</span>
                       </div>
                     </div>
                   ))}
@@ -219,13 +217,13 @@ export const OpportunityDetailModal: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                   {matchResult.eligibility.failedRequirements.map((req, i) => (
-                    <div key={i} className="p-2 rounded-lg bg-[#0a0514] border border-amber-900/50">
+                    <div key={i} className="rounded-lg border border-amber-200 bg-amber-50 p-2">
                       <div className="font-medium text-amber-300">{req.criterion}</div>
-                      <div className="text-slate-400 text-[11px] mt-0.5">
-                        Required: <span className="text-amber-200">{req.requiredValue}</span>
+                      <div className="text-gray-500 text-[11px] mt-0.5">
+                        Required: <span className="text-amber-700">{req.requiredValue}</span>
                       </div>
-                      <div className="text-slate-400 text-[11px]">
-                        Your Profile: <span className="text-slate-300">{req.userValue}</span>
+                      <div className="text-gray-500 text-[11px]">
+                        Your Profile: <span className="text-gray-700">{req.userValue}</span>
                       </div>
                     </div>
                   ))}
@@ -237,22 +235,14 @@ export const OpportunityDetailModal: React.FC = () => {
           {/* Section 3: Opportunity Details & Logistics */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             {/* Description & Overview */}
-            <div className="p-4 rounded-xl bg-[#0f0a1d] border border-violet-500/10 space-y-2 sm:col-span-2">
-              <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
-                Program Overview
-              </span>
-              <p className="text-slate-300 leading-relaxed text-sm">
-                {selectedOpportunity.description}
-              </p>
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Program Overview</span>
+              <p className="text-sm leading-relaxed text-slate-700">{selectedOpportunity.description}</p>
             </div>
 
-            {/* Financial Support Breakdown */}
-            <div className="p-4 rounded-xl bg-[#0f0a1d] border border-violet-500/10 space-y-2">
-              <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Financial & Travel Support</span>
-              </span>
-              <ul className="space-y-1 text-slate-300">
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-600"><DollarSign className="w-3.5 h-3.5 text-emerald-600" /> Financial & Travel Support</span>
+              <ul className="space-y-1 text-slate-700">
                 <li>• <strong>Funding Model:</strong> {selectedOpportunity.funding.replace('_', ' ')}</li>
                 {selectedOpportunity.stipend && <li>• <strong>Stipend:</strong> {selectedOpportunity.stipend}</li>}
                 {selectedOpportunity.prize && <li>• <strong>Prize / Award:</strong> {selectedOpportunity.prize}</li>}
@@ -262,13 +252,9 @@ export const OpportunityDetailModal: React.FC = () => {
               </ul>
             </div>
 
-            {/* Timeline & Dates */}
-            <div className="p-4 rounded-xl bg-[#0f0a1d] border border-violet-500/10 space-y-2">
-              <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Timeline & Schedule</span>
-              </span>
-              <ul className="space-y-1 text-slate-300">
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-600"><Calendar className="w-3.5 h-3.5 text-emerald-600" /> Timeline & Schedule</span>
+              <ul className="space-y-1 text-slate-700">
                 <li>• <strong>Application Deadline:</strong> {selectedOpportunity.deadline || 'Rolling / Open'}</li>
                 {selectedOpportunity.openingDate && <li>• <strong>Applications Open:</strong> {selectedOpportunity.openingDate}</li>}
                 {selectedOpportunity.startDate && <li>• <strong>Program Start:</strong> {selectedOpportunity.startDate}</li>}
@@ -277,18 +263,12 @@ export const OpportunityDetailModal: React.FC = () => {
               </ul>
             </div>
 
-            {/* Required Documents */}
             {selectedOpportunity.requiredDocuments && selectedOpportunity.requiredDocuments.length > 0 && (
-              <div className="p-4 rounded-xl bg-[#0f0a1d] border border-violet-500/10 space-y-2 sm:col-span-2">
-                <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-1">
-                  <FileText className="w-3.5 h-3.5 text-violet-400" />
-                  <span>Required Documents & Submission Materials</span>
-                </span>
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                <span className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-slate-600"><FileText className="w-3.5 h-3.5 text-emerald-600" /> Required Documents & Submission Materials</span>
                 <div className="flex flex-wrap gap-2 pt-1">
                   {selectedOpportunity.requiredDocuments.map((doc, i) => (
-                    <span key={i} className="px-2.5 py-1 rounded-lg bg-black/40 border border-white/10 text-slate-200">
-                      ✓ {doc}
-                    </span>
+                    <span key={i} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-slate-700">✓ {doc}</span>
                   ))}
                 </div>
               </div>
@@ -296,30 +276,30 @@ export const OpportunityDetailModal: React.FC = () => {
           </div>
 
           {/* Section 4: Source Transparency & Provenance */}
-          <div className="p-4 rounded-xl bg-[#0f0a1d] border border-violet-500/10 space-y-2 text-xs">
+          <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-slate-400" />
+              <span className="font-bold text-gray-700 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5 text-gray-500" />
                 <span>Source Provenance & Anti-Duplication Transparency</span>
               </span>
-              <span className="text-slate-400 font-mono text-[11px]">
+              <span className="text-gray-500 font-mono text-[11px]">
                 ID: {selectedOpportunity.canonicalOpportunityId}
               </span>
             </div>
 
-            <div className="text-slate-400 leading-relaxed">
+            <div className="text-gray-600 leading-relaxed">
               Pathlight indexes and verifies official opportunity sources directly. Last verified: <strong>{selectedOpportunity.lastVerified}</strong>.
             </div>
 
             {selectedOpportunity.duplicateNotes && (
-              <div className="text-[11px] text-slate-400 italic">
+              <div className="text-[11px] text-gray-500 italic">
                 Note: {selectedOpportunity.duplicateNotes}
               </div>
             )}
 
             <div className="pt-2 space-y-1.5">
               {selectedOpportunity.sources.map((src, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-black/30 border border-white/5 text-[11px]">
+                <div key={i} className="flex items-center justify-between rounded-lg border border-slate-200 bg-white p-2 text-[11px]">
                   <div>
                     <span className="font-semibold text-slate-200">{src.sourceName}</span>
                     <span className="text-slate-500 ml-1.5 capitalize">({src.sourceType.replace('_', ' ')})</span>
@@ -328,7 +308,7 @@ export const OpportunityDetailModal: React.FC = () => {
                     href={src.sourceUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    className="text-violet-400 hover:text-violet-300 underline flex items-center gap-1"
+                    className="flex items-center gap-1 text-emerald-700 underline hover:text-emerald-800"
                   >
                     <span>View Provenance</span>
                     <ExternalLink className="w-3 h-3" />
@@ -340,8 +320,8 @@ export const OpportunityDetailModal: React.FC = () => {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-5 sm:p-6 border-t border-violet-900/30 bg-[#050308]/90 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-xs text-slate-400 text-center sm:text-left">
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-200 bg-[#f8faf8] p-5 sm:flex-row sm:p-6">
+          <div className="text-xs text-gray-500 text-center sm:text-left">
             <span>Official Portal Routing. Pathlight never charges fees or takes application cuts.</span>
           </div>
 
@@ -350,7 +330,7 @@ export const OpportunityDetailModal: React.FC = () => {
               href={selectedOpportunity.officialSourceUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-white/10 transition-colors flex items-center justify-center gap-1.5"
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 sm:flex-initial"
             >
               <span>Official Info</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -360,7 +340,7 @@ export const OpportunityDetailModal: React.FC = () => {
               href={selectedOpportunity.applicationUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl text-xs font-bold bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/30 transition-all flex items-center justify-center gap-2"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/20 transition-all hover:bg-emerald-500 sm:flex-initial"
             >
               <span>Apply on Official Portal</span>
               <ExternalLink className="w-4 h-4" />
