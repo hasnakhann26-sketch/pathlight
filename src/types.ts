@@ -21,38 +21,16 @@ export type EducationLevel =
   | 'Any';
 
 export type Category =
-  | 'Essay / Writing'
-  | 'Quiz / Olympiad'
-  | 'MUN'
-  | 'Grant'
-  | 'Travel / Exchange'
-  | 'Competition / Hackathon'
-  | 'Conference / Summit'
-  | 'Scholarship'
   | 'Scholarships'
   | 'Fellowships'
+  | 'Research'
+  | 'Exchanges'
   | 'Grants'
   | 'Competitions'
   | 'Hackathons'
-  | 'Research'
   | 'Internships'
-  | 'Jobs'
-  | 'Exchanges'
-  | 'Summer schools'
   | 'Conferences'
-  | 'Awards'
-  | 'Youth programs'
-  | 'Leadership programs'
-  | 'Entrepreneurship'
-  | 'Incubators'
-  | 'Accelerators'
-  | 'Volunteering'
-  | 'Training'
-  | 'Study abroad'
-  | 'Travel-funded programs'
-  | 'Creative opportunities'
-  | 'Academic opportunities'
-  | 'Professional opportunities';
+  | 'MUN';
 
 export interface OpportunitySource {
   sourceName: string;

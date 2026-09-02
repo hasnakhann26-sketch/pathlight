@@ -3,7 +3,7 @@ import { ArrowUpDown, Calendar, CheckCircle2, DollarSign, Globe2, RotateCcw, Sea
 import { useApp } from '../context/AppContext';
 import { Category, FundingType, Modality } from '../types';
 
-const TOP_CATEGORIES: Category[] = ['Scholarships', 'Fellowships', 'Research', 'Exchanges', 'Grants', 'Competitions', 'Hackathons', 'Internships'];
+const TOP_CATEGORIES: Category[] = ['Scholarships', 'Fellowships', 'Research', 'Exchanges', 'Grants', 'Competitions', 'Hackathons', 'Internships', 'Conferences', 'MUN'];
 
 export const FilterBar: React.FC = () => {
   const { filters, updateFilter, resetFilters, opportunities } = useApp();

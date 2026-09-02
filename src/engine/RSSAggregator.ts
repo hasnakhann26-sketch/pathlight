@@ -144,20 +144,18 @@ function hashSeed(value: string): string {
 function inferCategory(title: string, description: string): Category {
   const text = `${title} ${description}`.toLowerCase();
 
-  if (/mun|model united nations|delegate conference/.test(text)) return 'MUN';
-  if (/essay|writing|poetry|storytelling|article|op-ed/.test(text)) return 'Essay / Writing';
-  if (/olympiad|quiz|physics|chemistry|mathematical/.test(text)) return 'Quiz / Olympiad';
-  if (/scholarship|master.*scholar|bachelors.*scholar|tuition waiver/.test(text)) return 'Scholarship';
-  if (/fellowship|research fellowship/.test(text)) return 'Fellowships';
-  if (/grant|funding|award|seed grant/.test(text)) return 'Grant';
-  if (/exchange|travel|study abroad|summer school|cultural exchange/.test(text)) return 'Travel / Exchange';
-  if (/research|lab|scientist|project/.test(text)) return 'Research';
-  if (/internship|intern/.test(text)) return 'Internships';
-  if (/hackathon|challenge|contest|competition|prize/.test(text)) return 'Competition / Hackathon';
-  if (/conference|summit|symposium|forum/.test(text)) return 'Conference / Summit';
-  if (/volunteer|volunteering/.test(text)) return 'Volunteering';
+  if (/scholarship|study\s+(?:abroad|program|opportunity)|tuition waiver|fully funded.*study/.test(text)) return 'Scholarships';
+  if (/fellowship/.test(text)) return 'Fellowships';
+  if (/research|phd|lab|scientist/.test(text)) return 'Research';
+  if (/exchange|travel|trip|fully funded/.test(text)) return 'Exchanges';
+  if (/grant|funding|fund\b/.test(text)) return 'Grants';
+  if (/competition|contest|prize|award|essay|writing|quiz|olympiad/.test(text)) return 'Competitions';
+  if (/hackathon|coding|build\b/.test(text)) return 'Hackathons';
+  if (/internship|intern\b/.test(text)) return 'Internships';
+  if (/mun|model united/.test(text)) return 'MUN';
+  if (/conference|summit|forum/.test(text)) return 'Conferences';
 
-  return 'Professional opportunities';
+  return 'Competitions';
 }
 
 function inferFunding(text: string): Opportunity['funding'] {
