@@ -20,21 +20,22 @@ interface RSSFeedDefinition {
   name: string;
   url: string;
   tier: RSSSourceTier;
+  alternateUrls?: string[];
 }
 
 const FEEDS: RSSFeedDefinition[] = [
-  { name: 'Opportunity Desk', url: 'https://opportunitydesk.org/feed/', tier: 1 },
-  { name: 'Youth Opportunities', url: 'https://www.youthop.com/feed', tier: 1 },
-  { name: 'OYA Opportunities', url: 'https://oyaop.com/feed/', tier: 1 },
-  { name: 'Opportunities for Youth', url: 'https://opportunitiesforyouth.org/feed/', tier: 1 },
-  { name: 'Opportunities Radar', url: 'https://opportunitiesradar.com/feed/', tier: 1 },
-  { name: 'Funds for NGOs', url: 'https://www2.fundsforngos.org/feed/', tier: 2 },
-  { name: 'Global Grants Hub', url: 'https://globalgrantshub.org/feed/', tier: 2 },
-  { name: 'Student Competitions', url: 'https://studentcompetitions.com/rss', tier: 2 },
-  { name: 'Opportunities Corners', url: 'https://opportunitiescorners.com/feed/', tier: 2 },
-  { name: 'Best Delegate', url: 'https://bestdelegate.com/feed/', tier: 2 },
-  { name: 'myMUN Conferences', url: 'https://mymun.com/conferences', tier: 3 },
-  { name: 'Best Delegate Conferences', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3 },
+  { name: 'Opportunity Desk', url: 'https://opportunitydesk.org/feed/', tier: 1, alternateUrls: ['https://opportunitydesk.org/feed', 'https://opportunitydesk.org/?feed=rss2'] },
+  { name: 'Youth Op', url: 'https://www.youthop.com/feed', tier: 1, alternateUrls: ['https://www.youthop.com/feed/', 'https://www.youthop.com/rss'] },
+  { name: 'OYA Opportunities', url: 'https://oyaop.com/feed/', tier: 1, alternateUrls: ['https://oyaop.com/rss/', 'https://oyaop.com/?feed=rss2'] },
+  { name: 'Opportunities For Youth', url: 'https://opportunitiesforyouth.org/feed/', tier: 1, alternateUrls: ['https://opportunitiesforyouth.org/rss'] },
+  { name: 'Opportunities Radar', url: 'https://opportunitiesradar.com/feed/', tier: 1, alternateUrls: ['https://opportunitiesradar.com/rss/'] },
+  { name: 'Funds For NGOs', url: 'https://www2.fundsforngos.org/feed/', tier: 2, alternateUrls: ['https://www2.fundsforngos.org/rss/'] },
+  { name: 'Global Grants Hub', url: 'https://globalgrantshub.org/feed/', tier: 2, alternateUrls: ['https://globalgrantshub.org/rss/'] },
+  { name: 'Student Competitions', url: 'https://studentcompetitions.com/rss', tier: 2, alternateUrls: ['https://studentcompetitions.com/feed', 'https://studentcompetitions.com/feed.xml'] },
+  { name: 'Opportunities Corners', url: 'https://opportunitiescorners.com/feed/', tier: 2, alternateUrls: ['https://opportunitiescorners.com/rss/'] },
+  { name: 'Best Delegate', url: 'https://bestdelegate.com/feed/', tier: 2, alternateUrls: ['https://bestdelegate.com/rss/', 'https://bestdelegate.com/feed.xml'] },
+  { name: 'My MUN', url: 'https://mymun.com/', tier: 3, alternateUrls: ['https://mymun.com/conferences', 'https://mymun.com'] },
+  { name: 'Best Delegate MUN', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3, alternateUrls: ['https://bestdelegate.com/model-un-conferences/feed', 'https://bestdelegate.com/model-un-conferences/rss/'] },
 ];
 
 const CACHE_KEYS: Record<RSSSourceTier, string> = {
@@ -69,6 +70,66 @@ function cleanText(value: string | null | undefined): string {
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+}
+
+const RSS_PROXY_CANDIDATES = [
+  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://thingproxy.freeboard.io/fetch/?url=${encodeURIComponent(url)}`,
+  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
+];
+
+async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal, headers: { Accept: 'application/rss+xml, application/xml, text/xml, text/html, application/json' } });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.text();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchFeedTextWithFallback(feedUrl: string): Promise<string> {
+  const urls = new Set<string>();
+  urls.add(feedUrl);
+  RSS_PROXY_CANDIDATES.forEach((builder) => urls.add(builder(feedUrl)));
+
+  const candidates = Array.from(urls);
+  let lastError: unknown;
+
+  for (const candidate of candidates) {
+    try {
+      const text = await fetchWithTimeout(candidate, 15000);
+      if (text && text.trim().length > 0) return text;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError ?? new Error(`Unable to fetch RSS feed: ${feedUrl}`);
+}
+
+async function fetchFeedTextWithFallbacks(feed: RSSFeedDefinition): Promise<string> {
+  const candidates = [feed.url, ...(feed.alternateUrls ?? [])];
+
+  for (const candidate of candidates) {
+    try {
+      const text = await fetchFeedTextWithFallback(candidate);
+      if (text && text.trim().length > 0) {
+        return text;
+      }
+    } catch {
+      // Keep testing the next URL/proxy variant.
+    }
+  }
+
+  throw new Error(`Unable to fetch any supported URL for ${feed.name}`);
 }
 
 function hashSeed(value: string): string {
@@ -188,37 +249,12 @@ function parseRSSXml(xmlText: string, feed: RSSFeedDefinition): Opportunity[] {
 }
 
 async function fetchFeedText(feedUrl: string): Promise<string> {
-  const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(feedUrl);
-  const response = await fetch(proxyUrl);
-  const text = await response.text();
-  if (text && text.trim().length > 0) {
-    return text;
-  }
-
-  const fallbackUrls = [
-    'https://corsproxy.io/?url=' + encodeURIComponent(feedUrl),
-    'https://thingproxy.freeboard.io/fetch/?url=' + encodeURIComponent(feedUrl),
-  ];
-
-  for (const candidate of fallbackUrls) {
-    try {
-      const fallbackResponse = await fetch(candidate);
-      if (!fallbackResponse.ok) continue;
-      const fallbackText = await fallbackResponse.text();
-      if (fallbackText && fallbackText.trim().length > 0) {
-        return fallbackText;
-      }
-    } catch {
-      // Keep trying the next fallback.
-    }
-  }
-
-  throw new Error(`Unable to fetch RSS feed: ${feedUrl}`);
+  return fetchFeedTextWithFallback(feedUrl);
 }
 
 async function fetchSingleFeed(feed: RSSFeedDefinition): Promise<{ name: string; tier: RSSSourceTier; ok: boolean; itemCount: number; opportunities: Opportunity[] }> {
   try {
-    const text = await fetchFeedText(feed.url);
+    const text = await fetchFeedTextWithFallbacks(feed);
     const opportunities = parseRSSXml(text, feed);
     const filtered = opportunities.filter((opp) => !EXCLUDE_PATTERNS.some((pattern) => `${opp.title} ${opp.description}`.toLowerCase().includes(pattern)));
     console.log(`${feed.name}: ${filtered.length} items (${filtered.length > 0 ? 'success' : 'fail'})`);
@@ -287,21 +323,24 @@ export async function fetchRSSSourceStatus(): Promise<RSSSourceStatus[]> {
   const settled = await Promise.allSettled(FEEDS.map((feed) => fetchSingleFeed(feed)));
 
   return settled.map((result, index) => {
+    const feed = FEEDS[index];
+
     if (result.status === 'fulfilled') {
       return {
         name: result.value.name,
         tier: result.value.tier,
         ok: result.value.ok,
         itemCount: result.value.itemCount,
+        url: feed?.url ?? '',
       };
     }
 
-    const feed = FEEDS[index];
     return {
       name: feed?.name ?? `Source ${index + 1}`,
       tier: feed?.tier ?? 1,
       ok: false,
       itemCount: 0,
+      url: feed?.url ?? '',
     };
   });
 }

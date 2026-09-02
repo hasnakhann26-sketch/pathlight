@@ -9,6 +9,7 @@ import { OpportunityCard } from './components/OpportunityCard';
 import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { ProfileModal } from './components/ProfileModal';
 import { StatsBar } from './components/StatsBar';
+import { SourcesPage } from './components/SourcesPage';
 import { Compass } from 'lucide-react';
 
 const MainView: React.FC = () => {
@@ -28,6 +29,20 @@ const MainView: React.FC = () => {
           <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
             <ApplicationsPage />
           </main>
+        </div>
+        <OpportunityDetailModal />
+        <ProfileModal />
+      </div>
+    );
+  }
+
+  if (currentView === 'sources') {
+    return (
+      <div className="min-h-screen bg-[#f5f5f3] text-slate-900">
+        <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
+        <div className="min-h-screen lg:pl-72">
+          <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
+          <SourcesPage />
         </div>
         <OpportunityDetailModal />
         <ProfileModal />

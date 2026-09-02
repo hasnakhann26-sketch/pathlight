@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, LayoutGrid, User, X } from 'lucide-react';
+import { Compass, Grid3X3, LayoutGrid, User, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 interface SidebarProps {
@@ -38,6 +38,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ mobileOpen, setMobileOpen }) =
           >
             <LayoutGrid className="h-4 w-4" />
             My Applications
+          </button>
+          <button
+            onClick={() => { setCurrentView('sources'); setMobileOpen?.(false); }}
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${currentView === 'sources' ? 'bg-[#ecfdf5] text-[#166534]' : 'text-slate-600 hover:bg-slate-100'}`}
+          >
+            <Grid3X3 className="h-4 w-4" />
+            Sources
           </button>
           <button
             onClick={() => { setIsProfileOpen(true); setMobileOpen?.(false); }}

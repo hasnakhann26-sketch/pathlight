@@ -25,7 +25,7 @@ interface ScoredOpportunity {
   matchResult: MatchScoreResult;
 }
 
-type ViewName = 'landing' | 'explore' | 'saved' | 'applications';
+type ViewName = 'landing' | 'explore' | 'saved' | 'applications' | 'sources';
 
 interface AppContextType {
   opportunities: Opportunity[];
@@ -90,7 +90,7 @@ interface AppContextType {
     closingSoonCount: number;
   };
 
-  rssStatus: { isLoading: boolean; lastUpdated: string | null; sourceStatus: Array<{ name: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number }> };
+  rssStatus: { isLoading: boolean; lastUpdated: string | null; sourceStatus: Array<{ name: string; url: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number; lastChecked: string | null }> };
 
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
@@ -99,6 +99,7 @@ interface AppContextType {
   connectorStatuses: Record<string, { status: string; message: string; recordCount: number }>;
   isConnectorFetching: boolean;
   lastConnectorSync: string | null;
+  refreshRSSStatus: () => Promise<void>;
 }
 
 const STORAGE_KEYS = {
@@ -233,7 +234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [rssStatus, setRssStatus] = useState({
     isLoading: false,
     lastUpdated: null as string | null,
-    sourceStatus: [] as Array<{ name: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number }>,
+    sourceStatus: [] as Array<{ name: string; url: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number; lastChecked: string | null }>,
   });
 
   const activeView = currentView;
@@ -323,6 +324,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateApplication(id, { notes });
   };
 
+  const refreshRSSStatus = async () => {
+    setRssStatus((prev) => ({ ...prev, isLoading: true }));
+
+    const [fetched, sourceStatus] = await Promise.all([
+      fetchAllRSSFeeds(),
+      fetchRSSSourceStatus(),
+    ]);
+
+    if (fetched.length > 0) {
+      setOpportunities((prev) => deduplicateOpportunities([...prev, ...fetched]));
+    }
+
+    setRssStatus({
+      isLoading: false,
+      lastUpdated: new Date().toISOString(),
+      sourceStatus: sourceStatus.map((status) => ({
+        ...status,
+        lastChecked: new Date().toISOString(),
+      })),
+    });
+  };
+
   const isOpportunityEligibleForProfile = (opportunity: Opportunity, userProfile: UserProfile): boolean => {
     if (!opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now()) {
       // deadline still active
@@ -408,23 +431,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    const loadRSS = async () => {
-      setRssStatus((prev) => ({ ...prev, isLoading: true, sourceStatus: [] }));
-
-      const fetched = await fetchAllRSSFeeds();
-      const sourceStatus = await fetchRSSSourceStatus();
-
-      if (fetched.length > 0) {
-        setOpportunities((prev) => deduplicateOpportunities([...prev, ...fetched]));
-      }
-
-      setRssStatus({
-        isLoading: false,
-        lastUpdated: new Date().toISOString(),
-        sourceStatus,
-      });
-    };
-    loadRSS();
+    void refreshRSSStatus();
   }, []);
 
   const toggleSaveOpportunity = (canonicalId: string) => {
@@ -787,6 +794,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isConnectorFetching,
         lastConnectorSync,
         rssStatus,
+        refreshRSSStatus,
       }}
     >
       {children}
