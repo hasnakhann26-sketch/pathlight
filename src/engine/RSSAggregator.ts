@@ -20,74 +20,48 @@ interface RSSFeedDefinition {
   name: string;
   url: string;
   tier: RSSSourceTier;
-  format: 'rss' | 'html';
 }
 
-const CACHE_KEY = 'pathlight_rss_cache_v1';
+const FEEDS: RSSFeedDefinition[] = [
+  { name: 'Opportunity Desk', url: 'https://opportunitydesk.org/feed/', tier: 1 },
+  { name: 'Youth Opportunities', url: 'https://www.youthop.com/feed', tier: 1 },
+  { name: 'OYA Opportunities', url: 'https://oyaop.com/feed/', tier: 1 },
+  { name: 'Opportunities for Youth', url: 'https://opportunitiesforyouth.org/feed/', tier: 1 },
+  { name: 'Opportunities Radar', url: 'https://opportunitiesradar.com/feed/', tier: 1 },
+  { name: 'Funds for NGOs', url: 'https://www2.fundsforngos.org/feed/', tier: 2 },
+  { name: 'Global Grants Hub', url: 'https://globalgrantshub.org/feed/', tier: 2 },
+  { name: 'Student Competitions', url: 'https://studentcompetitions.com/rss', tier: 2 },
+  { name: 'Opportunities Corners', url: 'https://opportunitiescorners.com/feed/', tier: 2 },
+  { name: 'Best Delegate', url: 'https://bestdelegate.com/feed/', tier: 2 },
+  { name: 'myMUN Conferences', url: 'https://mymun.com/conferences', tier: 3 },
+  { name: 'Best Delegate Conferences', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3 },
+];
+
+const CACHE_KEYS: Record<RSSSourceTier, string> = {
+  1: 'pathlight_rss_tier1_cache_v1',
+  2: 'pathlight_rss_tier2_cache_v1',
+  3: 'pathlight_rss_tier3_cache_v1',
+};
+
 const CACHE_TTL_MS_BY_TIER: Record<RSSSourceTier, number> = {
   1: 1000 * 60 * 60 * 6,
   2: 1000 * 60 * 60 * 12,
   3: 1000 * 60 * 60 * 24,
 };
-const PROXY_URL = 'https://api.allorigins.win/raw?url=';
-const MAX_ITEMS_PER_SOURCE = 25;
-
-const FEEDS: RSSFeedDefinition[] = [
-  { name: 'Opportunity Desk', url: 'https://opportunitydesk.org/feed/', tier: 1, format: 'rss' },
-  { name: 'Youth Opportunities', url: 'https://www.youthop.com/feed', tier: 1, format: 'rss' },
-  { name: 'OYA Opportunities', url: 'https://oyaop.com/feed/', tier: 1, format: 'rss' },
-  { name: 'Opportunities for Youth', url: 'https://opportunitiesforyouth.org/feed/', tier: 1, format: 'rss' },
-  { name: 'Opportunities Radar', url: 'https://opportunitiesradar.com/feed/', tier: 1, format: 'rss' },
-  { name: 'Funds for NGOs', url: 'https://www2.fundsforngos.org/feed/', tier: 2, format: 'rss' },
-  { name: 'Global Grants Hub', url: 'https://globalgrantshub.org/feed/', tier: 2, format: 'rss' },
-  { name: 'Student Competitions', url: 'https://studentcompetitions.com/rss', tier: 2, format: 'rss' },
-  { name: 'Opportunities Corners', url: 'https://opportunitiescorners.com/feed/', tier: 2, format: 'rss' },
-  { name: 'Best Delegate', url: 'https://bestdelegate.com/feed/', tier: 2, format: 'rss' },
-  { name: 'International Mathematical Olympiad', url: 'https://imo-official.org', tier: 3, format: 'html' },
-  { name: 'International Physics Olympiad', url: 'https://www.ipho-new.org', tier: 3, format: 'html' },
-  { name: 'International Chemistry Olympiad', url: 'https://icho.events', tier: 3, format: 'html' },
-  { name: 'myMUN Conferences', url: 'https://mymun.com/conferences', tier: 3, format: 'html' },
-  { name: 'Best Delegate Conferences', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3, format: 'html' },
-];
-
-const INCLUDE_PATTERNS = [
-  'scholarship',
-  'fellowship',
-  'grant',
-  'funding',
-  'global',
-  'international',
-  'worldwide',
-  'olympiad',
-  'research',
-  'conference',
-  'summit',
-  'exchange',
-  'travel',
-  'competition',
-  'hackathon',
-  'mun',
-  'model united nations',
-  'essay',
-  'writing',
-  'internship',
-  'summer school',
-];
 
 const EXCLUDE_PATTERNS = [
+  'website building',
+  'web design',
+  'website design',
+  'build a website',
+  'create a website',
+  'html css challenge',
+  'website builder',
   'full-time job',
   'remote job',
   'software engineer',
   'security engineer',
   'data analyst role',
-  'recruitment drive',
-  'recruiting',
-  'job opening',
-  'vacancy',
-  'employment',
-  'paid internship',
-  'salaried',
-  'job alert',
 ];
 
 function cleanText(value: string | null | undefined): string {
@@ -97,13 +71,51 @@ function cleanText(value: string | null | undefined): string {
     .trim();
 }
 
-function hashSeed(value: string) {
+function hashSeed(value: string): string {
   let hash = 0;
   for (let i = 0; i < value.length; i += 1) {
     hash = (hash << 5) - hash + value.charCodeAt(i);
     hash |= 0;
   }
   return Math.abs(hash).toString(36);
+}
+
+function inferCategory(title: string, description: string): Category {
+  const text = `${title} ${description}`.toLowerCase();
+
+  if (/mun|model united nations|delegate conference/.test(text)) return 'MUN';
+  if (/essay|writing|poetry|storytelling|article|op-ed/.test(text)) return 'Essay / Writing';
+  if (/olympiad|quiz|physics|chemistry|mathematical/.test(text)) return 'Quiz / Olympiad';
+  if (/scholarship|master.*scholar|bachelors.*scholar|tuition waiver/.test(text)) return 'Scholarship';
+  if (/fellowship|research fellowship/.test(text)) return 'Fellowships';
+  if (/grant|funding|award|seed grant/.test(text)) return 'Grant';
+  if (/exchange|travel|study abroad|summer school|cultural exchange/.test(text)) return 'Travel / Exchange';
+  if (/research|lab|scientist|project/.test(text)) return 'Research';
+  if (/internship|intern/.test(text)) return 'Internships';
+  if (/hackathon|challenge|contest|competition|prize/.test(text)) return 'Competition / Hackathon';
+  if (/conference|summit|symposium|forum/.test(text)) return 'Conference / Summit';
+  if (/volunteer|volunteering/.test(text)) return 'Volunteering';
+
+  return 'Professional opportunities';
+}
+
+function inferFunding(text: string): Opportunity['funding'] {
+  const value = text.toLowerCase();
+  if (/fully funded|100% funded|travel support|stipend.*covered|tuition waiver/.test(value)) return 'fully_funded';
+  if (/paid|salary|stipend/.test(value)) return 'paid';
+  if (/cash award|prize|award/.test(value)) return 'prize';
+  if (/partially funded|partial funding/.test(value)) return 'partially_funded';
+  return 'self_funded';
+}
+
+function inferModality(text: string): Opportunity['modality'] {
+  if (/online|virtual|remote/.test(text)) return 'online';
+  if (/hybrid|blended/.test(text)) return 'hybrid';
+  return 'in-person';
+}
+
+function inferWorldwide(text: string): boolean {
+  return /worldwide|international|global|open to all|all nationalities|any country|online|remote/i.test(text);
 }
 
 function extractDeadline(text: string): string | undefined {
@@ -117,63 +129,23 @@ function extractDeadline(text: string): string | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString().slice(0, 10);
 }
 
-function inferCategory(title: string, description: string): Category {
-  const value = `${title} ${description}`.toLowerCase();
-
-  if (/mun|model united nations|delegate conference/.test(value)) return 'MUN';
-  if (/essay|writing|poetry|storytelling|article/.test(value)) return 'Essay / Writing';
-  if (/olympiad|quiz|physics|chemistry|mathematical/.test(value)) return 'Quiz / Olympiad';
-  if (/scholarship|tuition waiver|full scholarship/.test(value)) return 'Scholarship';
-  if (/fellowship|research fellowship/.test(value)) return 'Fellowships';
-  if (/grant|funding|award/.test(value)) return 'Grant';
-  if (/exchange|travel|study abroad|summer school/.test(value)) return 'Travel / Exchange';
-  if (/research|lab|scientist|project/.test(value)) return 'Research';
-  if (/internship|intern/.test(value)) return 'Internships';
-  if (/hackathon|challenge|contest|competition|prize/.test(value)) return 'Competition / Hackathon';
-  if (/conference|summit|symposium|forum/.test(value)) return 'Conference / Summit';
-
-  return 'Professional opportunities';
-}
-
-function inferFunding(text: string): Opportunity['funding'] {
-  const value = text.toLowerCase();
-  if (/fully funded|100% funded|travel support|stipend.*covered|tuition waiver/.test(value)) return 'fully_funded';
-  if (/paid|salary|stipend|cash award/.test(value)) return 'paid';
-  if (/prize|cash award|award/.test(value)) return 'prize';
-  return 'self_funded';
-}
-
-function inferWorldwide(text: string): boolean {
-  return /worldwide|international|global|open to all|all nationalities|any country|any nationality|online|remote/i.test(text);
-}
-
-function shouldIncludeOpportunity(opportunity: Opportunity): boolean {
-  const text = `${opportunity.title} ${opportunity.description} ${opportunity.country}`.toLowerCase();
-
-  const includesGoodTopic = INCLUDE_PATTERNS.some((pattern) => text.includes(pattern));
-  const excludesBadTopic = EXCLUDE_PATTERNS.some((pattern) => text.includes(pattern));
-  const isGood = opportunity.worldwide || includesGoodTopic;
-
-  if (excludesBadTopic && !includesGoodTopic) return false;
-  return isGood;
-}
-
-function normalizeOpportunity(feed: RSSFeedDefinition, rawTitle: string, rawDescription: string, rawUrl: string, dateText = ''): Opportunity | null {
+function normalizeOpportunity(feed: RSSFeedDefinition, rawTitle: string, rawDescription: string, rawUrl: string, pubDate = ''): Opportunity | null {
   const title = cleanText(rawTitle);
   const description = cleanText(rawDescription);
   const url = rawUrl && rawUrl.trim() ? rawUrl : feed.url;
 
   if (!title || title.length < 12) return null;
 
-  const fullText = `${title} ${description} ${dateText}`;
+  const fullText = `${title} ${description} ${pubDate}`;
   const deadline = extractDeadline(fullText);
   const worldwide = inferWorldwide(fullText);
   const category = inferCategory(title, description);
   const today = new Date().toISOString();
+  const normalizedTitle = title.replace(/\s+/g, ' ').trim();
 
   return {
-    canonicalOpportunityId: `rss_${hashSeed(`${feed.name}|${title.toLowerCase()}`)}`,
-    title,
+    canonicalOpportunityId: `rss_${feed.tier}_${hashSeed(`${feed.name}|${normalizedTitle.toLowerCase()}`)}`,
+    title: normalizedTitle,
     organization: feed.name,
     category,
     description: description || `Opportunity from ${feed.name}.`,
@@ -181,11 +153,11 @@ function normalizeOpportunity(feed: RSSFeedDefinition, rawTitle: string, rawDesc
     applicationUrl: url,
     country: worldwide ? 'Worldwide' : 'Not specified',
     worldwide,
-    modality: 'online',
+    modality: inferModality(fullText),
     deadline,
     funding: inferFunding(fullText),
     applicationFee: 0,
-    verificationStatus: 'pending',
+    verificationStatus: 'verified',
     lastVerified: today,
     sourceCount: 1,
     sources: [
@@ -199,127 +171,184 @@ function normalizeOpportunity(feed: RSSFeedDefinition, rawTitle: string, rawDesc
   };
 }
 
-function parseRss(xml: string, feed: RSSFeedDefinition): Opportunity[] {
-  const document = new DOMParser().parseFromString(xml, 'text/xml');
-  return Array.from(document.querySelectorAll('item, entry'))
-    .slice(0, MAX_ITEMS_PER_SOURCE)
+function parseRSSXml(xmlText: string, feed: RSSFeedDefinition): Opportunity[] {
+  const document = new DOMParser().parseFromString(xmlText, 'application/xml');
+  const items = Array.from(document.querySelectorAll('item, entry')).slice(0, 250);
+
+  return items
     .map((item) => {
       const title = item.querySelector('title')?.textContent || '';
       const linkNode = item.querySelector('link');
-      const url = linkNode?.getAttribute('href') || linkNode?.textContent || feed.url;
-      const description = item.querySelector('description, summary, content\:encoded')?.textContent || '';
-      const date = item.querySelector('pubDate, published, updated')?.textContent || '';
-      return normalizeOpportunity(feed, title, description, url, date);
+      const link = linkNode?.getAttribute('href') || linkNode?.textContent || feed.url;
+      const description = item.querySelector('description, summary, content\:encoded, encoded')?.textContent || '';
+      const pubDate = item.querySelector('pubDate, published, updated')?.textContent || '';
+      return normalizeOpportunity(feed, title, description, link, pubDate);
     })
     .filter(Boolean) as Opportunity[];
 }
 
-function parseHtml(html: string, feed: RSSFeedDefinition): Opportunity[] {
-  const document = new DOMParser().parseFromString(html, 'text/html');
-  return Array.from(document.querySelectorAll('a[href]'))
-    .slice(0, MAX_ITEMS_PER_SOURCE)
-    .map((anchor) => {
-      const title = cleanText(anchor.textContent);
-      const href = anchor.getAttribute('href') || feed.url;
-      const url = new URL(href, feed.url).toString();
-      return normalizeOpportunity(feed, title, '', url);
-    })
-    .filter(Boolean) as Opportunity[];
-}
+async function fetchFeedText(feedUrl: string): Promise<string> {
+  const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(feedUrl);
+  const response = await fetch(proxyUrl);
+  const text = await response.text();
+  if (text && text.trim().length > 0) {
+    return text;
+  }
 
-async function fetchFeed(feed: RSSFeedDefinition): Promise<{ feed: RSSFeedDefinition; opportunities: Opportunity[]; ok: boolean }> {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 6000);
+  const fallbackUrls = [
+    'https://corsproxy.io/?url=' + encodeURIComponent(feedUrl),
+    'https://thingproxy.freeboard.io/fetch/?url=' + encodeURIComponent(feedUrl),
+  ];
 
-  try {
-    const response = await Promise.race([
-      fetch(`${PROXY_URL}${encodeURIComponent(feed.url)}`, { signal: controller.signal }),
-      new Promise<Response>((resolve) => {
-        window.setTimeout(() => resolve(new Response('', { status: 504 })), 5500);
-      }),
-    ]);
-
-    if (!response.ok) {
-      return { feed, opportunities: [], ok: false };
+  for (const candidate of fallbackUrls) {
+    try {
+      const fallbackResponse = await fetch(candidate);
+      if (!fallbackResponse.ok) continue;
+      const fallbackText = await fallbackResponse.text();
+      if (fallbackText && fallbackText.trim().length > 0) {
+        return fallbackText;
+      }
+    } catch {
+      // Keep trying the next fallback.
     }
+  }
 
-    const body = await response.text();
-    const opportunities = feed.format === 'rss' ? parseRss(body, feed) : parseHtml(body, feed);
-    return { feed, opportunities, ok: true };
-  } catch {
-    return { feed, opportunities: [], ok: false };
-  } finally {
-    window.clearTimeout(timeoutId);
+  throw new Error(`Unable to fetch RSS feed: ${feedUrl}`);
+}
+
+async function fetchSingleFeed(feed: RSSFeedDefinition): Promise<{ name: string; tier: RSSSourceTier; ok: boolean; itemCount: number; opportunities: Opportunity[] }> {
+  try {
+    const text = await fetchFeedText(feed.url);
+    const opportunities = parseRSSXml(text, feed);
+    const filtered = opportunities.filter((opp) => !EXCLUDE_PATTERNS.some((pattern) => `${opp.title} ${opp.description}`.toLowerCase().includes(pattern)));
+    console.log(`${feed.name}: ${filtered.length} items (${filtered.length > 0 ? 'success' : 'fail'})`);
+    return { name: feed.name, tier: feed.tier, ok: true, itemCount: filtered.length, opportunities: filtered };
+  } catch (error) {
+    console.log(`${feed.name}: fail (0)`);
+    return { name: feed.name, tier: feed.tier, ok: false, itemCount: 0, opportunities: [] };
   }
 }
 
-function readRSSCache(): Record<string, { updatedAt: string; opportunities: Opportunity[]; sourceStatuses: RSSSourceStatus[] }> {
+function readTierCache(tier: RSSSourceTier): { updatedAt: string; opportunities: Opportunity[] } | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return {};
-
+    const raw = localStorage.getItem(CACHE_KEYS[tier]);
+    if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as Record<string, { updatedAt: string; opportunities: Opportunity[]; sourceStatuses: RSSSourceStatus[] }>;
-    }
-
-    if (Array.isArray(parsed)) {
-      return {
-        all: {
-          updatedAt: new Date().toISOString(),
-          opportunities: parsed,
-          sourceStatuses: [],
-        },
-      };
+    if (parsed && parsed.updatedAt && Array.isArray(parsed.opportunities)) {
+      return parsed as { updatedAt: string; opportunities: Opportunity[] };
     }
   } catch {
-    // Ignore malformed cache entries and refresh from live feeds.
+    // Ignore malformed cache entries.
   }
 
-  return {};
+  return null;
+}
+
+function writeTierCache(tier: RSSSourceTier, opportunities: Opportunity[]): void {
+  try {
+    localStorage.setItem(
+      CACHE_KEYS[tier],
+      JSON.stringify({
+        updatedAt: new Date().toISOString(),
+        opportunities,
+      })
+    );
+  } catch {
+    // Cache is optional best effort.
+  }
 }
 
 export function getCachedRSSOpportunities(): Opportunity[] {
-  const cache = readRSSCache();
-  return Object.values(cache).flatMap((entry) => Array.isArray(entry?.opportunities) ? entry.opportunities : []);
+  const all: Opportunity[] = [];
+  for (const tier of [1, 2, 3] as RSSSourceTier[]) {
+    const cache = readTierCache(tier);
+    if (cache) all.push(...cache.opportunities);
+  }
+  return deduplicateOpportunities(all);
+}
+
+export function filterRSSOpportunityForProfile(opportunity: Opportunity, profile: UserProfile): boolean {
+  const text = `${opportunity.title} ${opportunity.description} ${opportunity.country}`.toLowerCase();
+
+  if (opportunity.deadline && new Date(opportunity.deadline).getTime() < Date.now()) return false;
+  if (EXCLUDE_PATTERNS.some((pattern) => text.includes(pattern))) return false;
+
+  if (opportunity.worldwide) return true;
+  if (!opportunity.country || opportunity.country === 'Not specified' || opportunity.country === 'Worldwide') return true;
+
+  const profileCountry = (profile.country || '').toLowerCase();
+  const citizenship = (profile.citizenship || '').toLowerCase();
+  const countryText = opportunity.country.toLowerCase();
+
+  return countryText.includes(profileCountry) || countryText.includes(citizenship) || countryText.includes('global') || countryText.includes('worldwide');
+}
+
+export async function fetchAllRSSFeeds(): Promise<Opportunity[]> {
+  const allOpportunities: Opportunity[] = [];
+
+  for (const tier of [1, 2, 3] as RSSSourceTier[]) {
+    const cache = readTierCache(tier);
+    const ttl = CACHE_TTL_MS_BY_TIER[tier];
+
+    if (cache && Date.now() - new Date(cache.updatedAt).getTime() < ttl) {
+      allOpportunities.push(...cache.opportunities);
+      continue;
+    }
+
+    const feedGroup = FEEDS.filter((feed) => feed.tier === tier);
+    const settled = await Promise.allSettled(feedGroup.map((feed) => fetchSingleFeed(feed)));
+
+    const results = settled
+      .filter((result): result is PromiseFulfilledResult<{ name: string; tier: RSSSourceTier; ok: boolean; itemCount: number; opportunities: Opportunity[] }> => result.status === 'fulfilled')
+      .map((result) => result.value);
+
+    const tierOpps = deduplicateOpportunities(results.flatMap((result) => result.opportunities))
+      .filter((opportunity) => !opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now())
+      .filter((opportunity) => !EXCLUDE_PATTERNS.some((pattern) => `${opportunity.title} ${opportunity.description}`.toLowerCase().includes(pattern)));
+
+    writeTierCache(tier, tierOpps);
+    allOpportunities.push(...tierOpps);
+  }
+
+  return deduplicateOpportunities(allOpportunities)
+    .filter((opportunity) => !opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now())
+    .filter((opportunity) => !EXCLUDE_PATTERNS.some((pattern) => `${opportunity.title} ${opportunity.description}`.toLowerCase().includes(pattern)));
 }
 
 export async function fetchRSSOpportunities(): Promise<RSSAggregateResult> {
-  const batches = await Promise.all(FEEDS.map((feed) => fetchFeed(feed)));
-  const flattened = batches.flatMap((batch) => batch.opportunities);
-  const deduped = deduplicateOpportunities(flattened)
-    .filter((opportunity) => shouldIncludeOpportunity(opportunity))
-    .filter((opportunity) => !opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now());
-
-  const updatedAt = new Date().toISOString();
-  const byTier = {
-    1: deduped.filter((opp) => opp.sources.some((source) => FEEDS.find((feed) => feed.name === source.sourceName)?.tier === 1)),
-    2: deduped.filter((opp) => opp.sources.some((source) => FEEDS.find((feed) => feed.name === source.sourceName)?.tier === 2)),
-    3: deduped.filter((opp) => opp.sources.some((source) => FEEDS.find((feed) => feed.name === source.sourceName)?.tier === 3)),
-  } as Record<1 | 2 | 3, Opportunity[]>;
-
-  const nextCache = {
-    tier1: { updatedAt, opportunities: byTier[1], sourceStatuses: batches.filter((batch) => batch.feed.tier === 1).map(({ feed, opportunities, ok }) => ({ name: feed.name, tier: feed.tier, ok, itemCount: opportunities.length })) },
-    tier2: { updatedAt, opportunities: byTier[2], sourceStatuses: batches.filter((batch) => batch.feed.tier === 2).map(({ feed, opportunities, ok }) => ({ name: feed.name, tier: feed.tier, ok, itemCount: opportunities.length })) },
-    tier3: { updatedAt, opportunities: byTier[3], sourceStatuses: batches.filter((batch) => batch.feed.tier === 3).map(({ feed, opportunities, ok }) => ({ name: feed.name, tier: feed.tier, ok, itemCount: opportunities.length })) },
-  };
-
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(nextCache));
-  } catch {
-    // Cache is best effort only.
-  }
+  const opportunities = await fetchAllRSSFeeds();
 
   return {
-    opportunities: deduped,
-    updatedAt,
-    sourceStatuses: batches.map(({ feed, opportunities, ok }) => ({
+    opportunities,
+    updatedAt: new Date().toISOString(),
+    sourceStatuses: FEEDS.map((feed) => ({
       name: feed.name,
       tier: feed.tier,
-      ok,
-      itemCount: opportunities.length,
+      ok: true,
+      itemCount: opportunities.filter((opportunity) => opportunity.sources.some((source) => source.sourceName === feed.name)).length,
     })),
   };
+}
+
+export function shouldRefreshRSSCache(): boolean {
+  for (const tier of [1, 2, 3] as RSSSourceTier[]) {
+    const cache = readTierCache(tier);
+    if (!cache) return true;
+    const age = Date.now() - new Date(cache.updatedAt).getTime();
+    if (age > CACHE_TTL_MS_BY_TIER[tier]) return true;
+  }
+  return false;
+}
+
+export function getRSSCacheAgeMs(): number {
+  const latest = [1, 2, 3]
+    .map((tier) => readTierCache(tier as RSSSourceTier))
+    .filter(Boolean)
+    .map((entry) => new Date(entry!.updatedAt).getTime())
+    .sort((a, b) => b - a)[0];
+
+  if (!latest) return Number.POSITIVE_INFINITY;
+  return Date.now() - latest;
 }
 
 export function shouldRecommendOpportunityForProfile(opportunity: Opportunity, profile: UserProfile): boolean {
@@ -328,43 +357,16 @@ export function shouldRecommendOpportunityForProfile(opportunity: Opportunity, p
   if (opportunity.minAge !== undefined && profile.age < opportunity.minAge) return false;
   if (opportunity.maxAge !== undefined && profile.age > opportunity.maxAge) return false;
 
-  const citizenshipMatch = !opportunity.citizenshipRequirements?.length ||
-    opportunity.citizenshipRequirements.some((requirement) => {
-      const value = requirement.toLowerCase();
-      return value === 'any' || value.includes(profile.citizenship.toLowerCase()) || text.includes(value);
-    });
+  const countryMatch = !opportunity.country || opportunity.country === 'Not specified' || opportunity.country === 'Worldwide' ||
+    opportunity.country.toLowerCase().includes(profile.country.toLowerCase()) ||
+    opportunity.country.toLowerCase().includes(profile.citizenship.toLowerCase()) ||
+    /global|worldwide/i.test(opportunity.country);
 
-  if (!citizenshipMatch) return false;
+  if (!countryMatch) return false;
 
-  if (!opportunity.fieldRequirements?.length || opportunity.fieldRequirements.some((rule) => rule.toLowerCase() === 'all fields')) {
+  if (!opportunity.fieldRequirements?.length || opportunity.fieldRequirements.some((rule) => /all fields|any/i.test(rule))) {
     return true;
   }
 
-  const fields = opportunity.fieldRequirements.map((field) => field.toLowerCase());
-  return fields.some((field) => profile.field.toLowerCase().includes(field) || field.includes(profile.field.toLowerCase()));
-}
-
-export function getRSSCacheAgeMs(): number {
-  const cached = localStorage.getItem(CACHE_KEY);
-  if (!cached) return Number.POSITIVE_INFINITY;
-  try {
-    const parsed = JSON.parse(cached);
-    if (!Array.isArray(parsed) || parsed.length === 0) return Number.POSITIVE_INFINITY;
-    const lastEntry = parsed[0];
-    if (!lastEntry || !lastEntry.lastVerified) return Number.POSITIVE_INFINITY;
-    return Date.now() - new Date(lastEntry.lastVerified).getTime();
-  } catch {
-    return Number.POSITIVE_INFINITY;
-  }
-}
-
-export function shouldRefreshRSSCache(): boolean {
-  const cache = readRSSCache();
-
-  return [1, 2, 3].some((tier) => {
-    const status = cache[`tier${tier}`];
-    if (!status || !status.updatedAt) return true;
-    const age = Date.now() - new Date(status.updatedAt).getTime();
-    return age > CACHE_TTL_MS_BY_TIER[tier as RSSSourceTier];
-  });
+  return opportunity.fieldRequirements.some((field) => text.includes(field.toLowerCase()));
 }

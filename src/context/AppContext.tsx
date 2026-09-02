@@ -18,7 +18,7 @@ import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
 import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
 import { GrantsGovConnector } from '../engine/connectors';
-import { fetchRSSOpportunities, getCachedRSSOpportunities, shouldRefreshRSSCache } from '../engine/RSSAggregator';
+import { fetchAllRSSFeeds } from '../engine/RSSAggregator';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -353,26 +353,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const hydrateFromRSS = async () => {
-    setRssStatus((prev) => ({ ...prev, isLoading: true }));
-
-    try {
-      const result = await fetchRSSOpportunities();
-      setOpportunities((prev) => deduplicateOpportunities([...prev, ...result.opportunities]));
-      setRssStatus({
-        isLoading: false,
-        lastUpdated: result.updatedAt,
-        sourceStatus: result.sourceStatuses,
-      });
-      console.log('RSS hydrated:', result.opportunities.length, 'opportunities loaded');
-    } catch (error) {
-      console.warn('RSS feed sync failed:', error);
-      setRssStatus((prev) => ({ ...prev, isLoading: false, sourceStatus: [] }));
-    }
-  };
-
   useEffect(() => {
-    hydrateFromRSS();
+    const loadRSS = async () => {
+      const fetched = await fetchAllRSSFeeds();
+      if (fetched.length > 0) {
+        setOpportunities((prev) => deduplicateOpportunities([...prev, ...fetched]));
+      }
+    };
+    loadRSS();
   }, []);
 
   const toggleSaveOpportunity = (canonicalId: string) => {

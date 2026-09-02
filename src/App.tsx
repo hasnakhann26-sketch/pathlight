@@ -11,7 +11,7 @@ import { ProfileModal } from './components/ProfileModal';
 import { Compass } from 'lucide-react';
 
 const MainView: React.FC = () => {
-  const { filteredOpportunities, rssStatus, currentView, viewMode, resetFilters } = useApp();
+  const { filteredOpportunities, opportunities, rssStatus, currentView, viewMode, resetFilters } = useApp();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   if (currentView === 'landing') {
@@ -51,10 +51,14 @@ const MainView: React.FC = () => {
             </div>
           </div>
 
-          {rssStatus.isLoading && (
+          {rssStatus.isLoading ? (
             <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
-              <span>Loading opportunities...</span>
+              <span>Loading live opportunities from 12 sources...</span>
+            </div>
+          ) : (
+            <div className="mb-6 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm">
+              {opportunities.length} opportunities found
             </div>
           )}
 
