@@ -353,47 +353,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const hydrateFromRSS = async () => {
+    setRssStatus((prev) => ({ ...prev, isLoading: true }));
+
+    try {
+      const result = await fetchRSSOpportunities();
+      setOpportunities((prev) => deduplicateOpportunities([...prev, ...result.opportunities]));
+      setRssStatus({
+        isLoading: false,
+        lastUpdated: result.updatedAt,
+        sourceStatus: result.sourceStatuses,
+      });
+      console.log('RSS hydrated:', result.opportunities.length, 'opportunities loaded');
+    } catch (error) {
+      console.warn('RSS feed sync failed:', error);
+      setRssStatus((prev) => ({ ...prev, isLoading: false, sourceStatus: [] }));
+    }
+  };
+
   useEffect(() => {
-    let cancelled = false;
-
-    const hydrateRss = async () => {
-      setRssStatus((prev) => ({ ...prev, isLoading: true }));
-
-      const cached = getCachedRSSOpportunities();
-      const shouldRefresh = shouldRefreshRSSCache();
-
-      if (!cancelled && cached.length > 0 && !shouldRefresh) {
-        setOpportunities((prev) => deduplicateOpportunities([...prev, ...cached]));
-        setRssStatus({
-          isLoading: false,
-          lastUpdated: new Date().toISOString(),
-          sourceStatus: [],
-        });
-        return;
-      }
-
-      try {
-        const result = await fetchRSSOpportunities();
-        if (cancelled) return;
-
-        setOpportunities((prev) => deduplicateOpportunities([...prev, ...result.opportunities]));
-        setRssStatus({
-          isLoading: false,
-          lastUpdated: result.updatedAt,
-          sourceStatus: result.sourceStatuses,
-        });
-      } catch (error) {
-        if (!cancelled) {
-          console.warn('RSS feed sync failed:', error);
-          setRssStatus((prev) => ({ ...prev, isLoading: false, sourceStatus: [] }));
-        }
-      }
-    };
-
-    hydrateRss();
-    return () => {
-      cancelled = true;
-    };
+    hydrateFromRSS();
   }, []);
 
   const toggleSaveOpportunity = (canonicalId: string) => {
