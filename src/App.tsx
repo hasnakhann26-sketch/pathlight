@@ -8,10 +8,11 @@ import { ApplicationsPage } from './components/ApplicationsPage';
 import { OpportunityCard } from './components/OpportunityCard';
 import { OpportunityDetailModal } from './components/OpportunityDetailModal';
 import { ProfileModal } from './components/ProfileModal';
+import { StatsBar } from './components/StatsBar';
 import { Compass } from 'lucide-react';
 
 const MainView: React.FC = () => {
-  const { filteredOpportunities, opportunities, rssStatus, currentView, viewMode, resetFilters } = useApp();
+  const { filteredOpportunities, opportunities, rssStatus, currentView, viewMode, resetFilters, stats, filters, updateFilter } = useApp();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   if (currentView === 'landing') {
@@ -39,15 +40,25 @@ const MainView: React.FC = () => {
       <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
       <div className="min-h-screen lg:pl-72">
         <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
+        <div className="border-b border-slate-200 bg-white/80 backdrop-blur-sm">
+          <div className="mx-auto max-w-6xl px-4 py-3 sm:px-6 lg:px-8">
+            <StatsBar />
+          </div>
+        </div>
 
         <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#166534]">Explore</p>
               <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-900">Find Your Next Opportunity</h1>
             </div>
-            <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm">
-              <span className="font-bold text-slate-900">{filteredOpportunities.length}</span> loaded
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm">
+                <span className="font-bold text-slate-900">{opportunities.length}</span> total
+              </div>
+              <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm">
+                <span className="font-bold text-slate-900">{stats.eligibleCount}</span> eligible for you
+              </div>
             </div>
           </div>
 
@@ -56,11 +67,20 @@ const MainView: React.FC = () => {
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
               <span>Loading live opportunities from 12 sources...</span>
             </div>
-          ) : (
-            <div className="mb-6 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm">
-              {opportunities.length} opportunities found
+          ) : null}
+
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+            <button
+              type="button"
+              onClick={() => updateFilter('eligibleOnly', !filters.eligibleOnly)}
+              className={`inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-medium ${filters.eligibleOnly ? 'border-[#166534] bg-[#ecfdf5] text-[#166534]' : 'border-slate-200 bg-white text-slate-700 hover:text-slate-900'}`}
+            >
+              Show only what I can apply to
+            </button>
+            <div className="text-sm text-slate-600">
+              {filteredOpportunities.length} visible now
             </div>
-          )}
+          </div>
 
           <div className="mb-6">
             <FilterBar />

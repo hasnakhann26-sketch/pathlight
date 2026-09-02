@@ -18,7 +18,7 @@ import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
 import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
 import { GrantsGovConnector } from '../engine/connectors';
-import { fetchAllRSSFeeds } from '../engine/RSSAggregator';
+import { fetchAllRSSFeeds, fetchRSSSourceStatus } from '../engine/RSSAggregator';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -203,7 +203,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isSourceRegistryOpen, setIsSourceRegistryOpen] = useState(false);
   const [isJsonImportOpen, setIsJsonImportOpen] = useState(false);
   const [currentView, setCurrentView] = useState<ViewName>('landing');
-  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [filters, setFilters] = useState<FilterState>(() => {
+    try {
+      const saved = localStorage.getItem('pathlight_filters_v1');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return { ...INITIAL_FILTERS, ...parsed };
+      }
+    } catch (error) {
+      console.warn('Failed to load filters from localStorage', error);
+    }
+    return INITIAL_FILTERS;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('pathlight_filters_v1', JSON.stringify(filters));
+    } catch (error) {
+      console.warn('Failed to persist filters to localStorage', error);
+    }
+  }, [filters]);
   const [discoveryInput, setDiscoveryInput] = useState('');
   const [discoverySignals, setDiscoverySignals] = useState<DiscoverySignals | null>(null);
   const discoveryProvider = useMemo(() => createDiscoveryProvider(), []);
@@ -304,6 +323,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateApplication(id, { notes });
   };
 
+  const isOpportunityEligibleForProfile = (opportunity: Opportunity, userProfile: UserProfile): boolean => {
+    if (!opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now()) {
+      // deadline still active
+    } else {
+      return false;
+    }
+
+    const ageRangeOk =
+      (opportunity.minAge === undefined && opportunity.maxAge === undefined) ||
+      (userProfile.age >= (opportunity.minAge ?? 0) && userProfile.age <= (opportunity.maxAge ?? 200));
+
+    const nationalityOk =
+      !opportunity.citizenshipRequirements?.length ||
+      opportunity.citizenshipRequirements.some((requirement) => {
+        const value = requirement.toLowerCase();
+        if (['any', 'worldwide', 'all nationalities', 'open to all'].includes(value)) return true;
+        return (
+          value.includes(userProfile.citizenship.toLowerCase()) ||
+          value.includes(userProfile.country.toLowerCase()) ||
+          value.includes('global south') && ['pakistan', 'india', 'kenya', 'nigeria', 'bangladesh', 'ghana', 'vietnam', 'philippines', 'egypt', 'brazil', 'indonesia', 'colombia'].includes(userProfile.citizenship.toLowerCase())
+        );
+      });
+
+    const fieldOk =
+      !opportunity.fieldRequirements?.length ||
+      opportunity.fieldRequirements.some((requirement) => {
+        const normalized = requirement.toLowerCase();
+        return /all fields|any/i.test(normalized) ||
+          normalized.includes(userProfile.field.toLowerCase()) ||
+          userProfile.field.toLowerCase().includes(normalized);
+      });
+
+    return ageRangeOk && nationalityOk && fieldOk;
+  };
+
   const exportApplicationsCsv = () => {
     const headers = ['Title', 'Organization', 'Category', 'Status', 'Date Applied', 'Notes'];
     const rows = applications.map((app) => [
@@ -355,10 +409,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     const loadRSS = async () => {
+      setRssStatus((prev) => ({ ...prev, isLoading: true, sourceStatus: [] }));
+
       const fetched = await fetchAllRSSFeeds();
+      const sourceStatus = await fetchRSSSourceStatus();
+
       if (fetched.length > 0) {
         setOpportunities((prev) => deduplicateOpportunities([...prev, ...fetched]));
       }
+
+      setRssStatus({
+        isLoading: false,
+        lastUpdated: new Date().toISOString(),
+        sourceStatus,
+      });
     };
     loadRSS();
   }, []);
@@ -455,6 +519,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   }, [opportunities, profile]);
 
+  const eligibleOpportunityIds = useMemo(() => {
+    return new Set(
+      opportunities
+        .filter((opportunity) => isOpportunityEligibleForProfile(opportunity, profile))
+        .map((opportunity) => opportunity.canonicalOpportunityId)
+    );
+  }, [opportunities, profile]);
+
   const filteredOpportunities = useMemo<ScoredOpportunity[]>(() => {
     let list = [...scoredOpportunities];
 
@@ -496,7 +568,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     if (filters.eligibleOnly) {
-      list = list.filter(({ matchResult }) => matchResult.isEligible);
+      list = list.filter(({ opportunity }) => eligibleOpportunityIds.has(opportunity.canonicalOpportunityId));
     }
 
     if (filters.savedOnly) {
@@ -555,7 +627,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const stats = useMemo(() => {
     const total = opportunities.length;
-    const eligibleCount = scoredOpportunities.filter((s) => s.matchResult.isEligible).length;
+    const eligibleCount = opportunities.filter((opportunity) => isOpportunityEligibleForProfile(opportunity, profile)).length;
     const fullyFundedCount = opportunities.filter((o) => o.funding === 'fully_funded').length;
     const savedCount = savedOpportunityIds.length;
 

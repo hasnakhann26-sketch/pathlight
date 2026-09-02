@@ -283,6 +283,29 @@ export function filterRSSOpportunityForProfile(opportunity: Opportunity, profile
   return countryText.includes(profileCountry) || countryText.includes(citizenship) || countryText.includes('global') || countryText.includes('worldwide');
 }
 
+export async function fetchRSSSourceStatus(): Promise<RSSSourceStatus[]> {
+  const settled = await Promise.allSettled(FEEDS.map((feed) => fetchSingleFeed(feed)));
+
+  return settled.map((result, index) => {
+    if (result.status === 'fulfilled') {
+      return {
+        name: result.value.name,
+        tier: result.value.tier,
+        ok: result.value.ok,
+        itemCount: result.value.itemCount,
+      };
+    }
+
+    const feed = FEEDS[index];
+    return {
+      name: feed?.name ?? `Source ${index + 1}`,
+      tier: feed?.tier ?? 1,
+      ok: false,
+      itemCount: 0,
+    };
+  });
+}
+
 export async function fetchAllRSSFeeds(): Promise<Opportunity[]> {
   const allOpportunities: Opportunity[] = [];
 
