@@ -68,11 +68,6 @@ function cleanText(value: string | null | undefined): string {
     .trim();
 }
 
-const RSS_PROXY_CANDIDATES = [
-  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-];
-
 async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -89,22 +84,13 @@ async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<string> 
 }
 
 async function fetchFeedTextWithFallback(feedUrl: string): Promise<string> {
-  const candidates = [
-    `/.netlify/functions/fetch-feed?url=${encodeURIComponent(feedUrl)}`,
-    ...RSS_PROXY_CANDIDATES.map((builder) => builder(feedUrl)),
-  ];
-  let lastError: unknown;
-
-  for (const candidate of candidates) {
-    try {
-      const text = await fetchWithTimeout(candidate, 5000);
-      if (text && text.trim().length > 0) return text;
-    } catch (error) {
-      lastError = error;
-    }
+  const endpoint = `/.netlify/functions/fetch-feed?url=${encodeURIComponent(feedUrl)}`;
+  const text = await fetchWithTimeout(endpoint, 5000);
+  if (text && text.trim().length > 0) {
+    return text;
   }
 
-  throw lastError ?? new Error(`Unable to fetch RSS feed: ${feedUrl}`);
+  throw new Error(`Unable to fetch RSS feed: ${feedUrl}`);
 }
 
 async function fetchFeedTextWithFallbacks(feed: RSSFeedDefinition): Promise<string> {

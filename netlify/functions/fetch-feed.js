@@ -4,33 +4,29 @@ exports.handler = async (event) => {
   if (!url) {
     return {
       statusCode: 400,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: 'Missing url query parameter',
+      body: 'Missing url parameter',
     };
   }
 
   try {
     const response = await fetch(url, {
-      headers: {
-        Accept: 'application/rss+xml, application/xml, text/xml, text/html',
-        'User-Agent': 'Pathlight RSS reader',
-      },
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(10000),
     });
     const text = await response.text();
 
     return {
-      statusCode: response.status,
+      statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Content-Type': response.headers.get('content-type') || 'application/xml',
+        'Content-Type': 'application/xml',
       },
       body: text,
     };
   } catch (error) {
     return {
-      statusCode: 502,
-      headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: error instanceof Error ? error.message : 'Feed request failed' }),
+      statusCode: 500,
+      body: 'Failed to fetch: ' + error.message,
     };
   }
 };
