@@ -18,7 +18,7 @@ import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
 import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
 import { GrantsGovConnector } from '../engine/connectors';
-import { fetchAllRSSFeeds, fetchRSSSourceStatus } from '../engine/RSSAggregator';
+import { fetchRSSSources, getCachedRSSOpportunities } from '../engine/RSSAggregator';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -190,13 +190,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...parsed]);
+          return deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...parsed, ...getCachedRSSOpportunities()]);
         }
       }
     } catch (e) {
       console.warn('Failed to load custom opportunities', e);
     }
-    return deduplicateOpportunities(DEMO_OPPORTUNITIES);
+    return deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...getCachedRSSOpportunities()]);
   });
 
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
@@ -325,25 +325,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const refreshRSSStatus = async () => {
-    setRssStatus((prev) => ({ ...prev, isLoading: true }));
+    setRssStatus((prev) => ({ ...prev, isLoading: true, sourceStatus: [] }));
 
-    const [fetched, sourceStatus] = await Promise.all([
-      fetchAllRSSFeeds(),
-      fetchRSSSourceStatus(),
-    ]);
+    await fetchRSSSources((result) => {
+      if (result.opportunities.length > 0) {
+        setOpportunities((prev) => deduplicateOpportunities([...prev, ...result.opportunities]));
+      }
 
-    if (fetched.length > 0) {
-      setOpportunities((prev) => deduplicateOpportunities([...prev, ...fetched]));
-    }
-
-    setRssStatus({
-      isLoading: false,
-      lastUpdated: new Date().toISOString(),
-      sourceStatus: sourceStatus.map((status) => ({
-        ...status,
-        lastChecked: new Date().toISOString(),
-      })),
+      setRssStatus((prev) => ({
+        ...prev,
+        sourceStatus: [...prev.sourceStatus.filter((source) => source.name !== result.name), result],
+      }));
     });
+
+    setRssStatus((prev) => ({ ...prev, isLoading: false, lastUpdated: new Date().toISOString() }));
   };
 
   const isOpportunityEligibleForProfile = (opportunity: Opportunity, userProfile: UserProfile): boolean => {

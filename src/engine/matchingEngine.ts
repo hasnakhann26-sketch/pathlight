@@ -204,7 +204,7 @@ export function calculateMatchScore(
   let matchedGoalReasons: string[] = [];
 
   if (userGoals.some((g) => g.includes('study abroad') || g.includes('international'))) {
-    if (opportunity.worldwide || opportunity.country !== profile.country || opportunity.category === 'Exchanges' || opportunity.category === 'Study abroad') {
+    if (opportunity.worldwide || opportunity.country !== profile.country || opportunity.category === 'Exchanges') {
       goalPoints += 6;
       matchedGoalReasons.push('Directly supports your goal of international study & exchange');
     }

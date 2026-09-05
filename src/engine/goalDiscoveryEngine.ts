@@ -45,13 +45,13 @@ const CATEGORY_GOAL_MAPPINGS: CategoryGoalMap[] = [
       `You searched for ${searched}. High-impact global hackathons and competitions were discovered with prize grants and international recognition.`,
   },
   {
-    targetCategory: 'Summer schools',
+    targetCategory: 'Scholarships',
     relevantGoals: ['Study abroad', 'Research', 'Build academic CV'],
     explanationTemplate: (searched, goal) =>
       `You searched for ${searched}. Fully funded international summer institutes offer intensive training and global exposure for your goal to "${goal}".`,
   },
   {
-    targetCategory: 'Travel-funded programs',
+    targetCategory: 'Exchanges',
     relevantGoals: ['Study abroad', 'Network with global leaders', 'International Opportunities'],
     explanationTemplate: (searched, goal) =>
       `You searched for ${searched}. Travel-funded youth programs cover all international flights and accommodations to advance your global trajectory.`,

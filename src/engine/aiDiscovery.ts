@@ -44,8 +44,8 @@ const CATEGORY_MAP: Record<string, Category> = {
   exchanges: 'Exchanges',
   conference: 'Conferences',
   conferences: 'Conferences',
-  startup: 'Entrepreneurship',
-  entrepreneurship: 'Entrepreneurship',
+  startup: 'Hackathons',
+  entrepreneurship: 'Hackathons',
 };
 
 const COUNTRY_HINTS = [

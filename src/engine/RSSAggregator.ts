@@ -5,9 +5,11 @@ export type RSSSourceTier = 1 | 2 | 3;
 
 export interface RSSSourceStatus {
   name: string;
+  url: string;
   tier: RSSSourceTier;
   ok: boolean;
   itemCount: number;
+  lastChecked: string | null;
 }
 
 export interface RSSAggregateResult {
@@ -37,12 +39,6 @@ const FEEDS: RSSFeedDefinition[] = [
   { name: 'My MUN', url: 'https://mymun.com/', tier: 3, alternateUrls: ['https://mymun.com/conferences', 'https://mymun.com'] },
   { name: 'Best Delegate MUN', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3, alternateUrls: ['https://bestdelegate.com/model-un-conferences/feed', 'https://bestdelegate.com/model-un-conferences/rss/'] },
 ];
-
-const CACHE_KEYS: Record<RSSSourceTier, string> = {
-  1: 'pathlight_rss_tier1_cache_v1',
-  2: 'pathlight_rss_tier2_cache_v1',
-  3: 'pathlight_rss_tier3_cache_v1',
-};
 
 const CACHE_TTL_MS_BY_TIER: Record<RSSSourceTier, number> = {
   1: 1000 * 60 * 60 * 6,
@@ -75,12 +71,9 @@ function cleanText(value: string | null | undefined): string {
 const RSS_PROXY_CANDIDATES = [
   (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   (url: string) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://thingproxy.freeboard.io/fetch/?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
 ];
 
-async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string> {
+async function fetchWithTimeout(url: string, timeoutMs = 5000): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -96,16 +89,15 @@ async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string>
 }
 
 async function fetchFeedTextWithFallback(feedUrl: string): Promise<string> {
-  const urls = new Set<string>();
-  urls.add(feedUrl);
-  RSS_PROXY_CANDIDATES.forEach((builder) => urls.add(builder(feedUrl)));
-
-  const candidates = Array.from(urls);
+  const candidates = [
+    `/.netlify/functions/fetch-feed?url=${encodeURIComponent(feedUrl)}`,
+    ...RSS_PROXY_CANDIDATES.map((builder) => builder(feedUrl)),
+  ];
   let lastError: unknown;
 
   for (const candidate of candidates) {
     try {
-      const text = await fetchWithTimeout(candidate, 15000);
+      const text = await fetchWithTimeout(candidate, 5000);
       if (text && text.trim().length > 0) return text;
     } catch (error) {
       lastError = error;
@@ -116,20 +108,7 @@ async function fetchFeedTextWithFallback(feedUrl: string): Promise<string> {
 }
 
 async function fetchFeedTextWithFallbacks(feed: RSSFeedDefinition): Promise<string> {
-  const candidates = [feed.url, ...(feed.alternateUrls ?? [])];
-
-  for (const candidate of candidates) {
-    try {
-      const text = await fetchFeedTextWithFallback(candidate);
-      if (text && text.trim().length > 0) {
-        return text;
-      }
-    } catch {
-      // Keep testing the next URL/proxy variant.
-    }
-  }
-
-  throw new Error(`Unable to fetch any supported URL for ${feed.name}`);
+  return fetchFeedTextWithFallback(feed.url);
 }
 
 function hashSeed(value: string): string {
@@ -250,53 +229,67 @@ async function fetchFeedText(feedUrl: string): Promise<string> {
   return fetchFeedTextWithFallback(feedUrl);
 }
 
-async function fetchSingleFeed(feed: RSSFeedDefinition): Promise<{ name: string; tier: RSSSourceTier; ok: boolean; itemCount: number; opportunities: Opportunity[] }> {
+interface FeedResult {
+  name: string;
+  url: string;
+  tier: RSSSourceTier;
+  ok: boolean;
+  itemCount: number;
+  opportunities: Opportunity[];
+  lastChecked: string;
+}
+
+const FEED_CACHE_PREFIX = 'pathlight_rss_feed_v2_';
+
+function readFeedCache(feed: RSSFeedDefinition): { updatedAt: string; opportunities: Opportunity[] } | null {
+  try {
+    const raw = localStorage.getItem(`${FEED_CACHE_PREFIX}${hashSeed(feed.name)}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.updatedAt && Array.isArray(parsed.opportunities)) return parsed;
+  } catch {
+    // Ignore malformed cache entries.
+  }
+  return null;
+}
+
+function writeFeedCache(feed: RSSFeedDefinition, opportunities: Opportunity[]): void {
+  try {
+    localStorage.setItem(`${FEED_CACHE_PREFIX}${hashSeed(feed.name)}`, JSON.stringify({ updatedAt: new Date().toISOString(), opportunities }));
+  } catch {
+    // Caching is best effort.
+  }
+}
+
+async function fetchSingleFeed(feed: RSSFeedDefinition): Promise<FeedResult> {
+  const checkedAt = new Date().toISOString();
+  const cache = readFeedCache(feed);
+  const cacheIsFresh = cache && Date.now() - new Date(cache.updatedAt).getTime() < CACHE_TTL_MS_BY_TIER[feed.tier];
+
+  if (cacheIsFresh) {
+    return { name: feed.name, url: feed.url, tier: feed.tier, ok: true, itemCount: cache.opportunities.length, opportunities: cache.opportunities, lastChecked: cache.updatedAt };
+  }
+
   try {
     const text = await fetchFeedTextWithFallbacks(feed);
     const opportunities = parseRSSXml(text, feed);
     const filtered = opportunities.filter((opp) => !EXCLUDE_PATTERNS.some((pattern) => `${opp.title} ${opp.description}`.toLowerCase().includes(pattern)));
-    console.log(`${feed.name}: ${filtered.length} items (${filtered.length > 0 ? 'success' : 'fail'})`);
-    return { name: feed.name, tier: feed.tier, ok: true, itemCount: filtered.length, opportunities: filtered };
-  } catch (error) {
+    const active = filtered.filter((opportunity) => !opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now());
+    writeFeedCache(feed, active);
+    return { name: feed.name, url: feed.url, tier: feed.tier, ok: true, itemCount: active.length, opportunities: active, lastChecked: checkedAt };
+  } catch {
     console.log(`${feed.name}: fail (0)`);
-    return { name: feed.name, tier: feed.tier, ok: false, itemCount: 0, opportunities: [] };
-  }
-}
-
-function readTierCache(tier: RSSSourceTier): { updatedAt: string; opportunities: Opportunity[] } | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEYS[tier]);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && parsed.updatedAt && Array.isArray(parsed.opportunities)) {
-      return parsed as { updatedAt: string; opportunities: Opportunity[] };
-    }
-  } catch {
-    // Ignore malformed cache entries.
-  }
-
-  return null;
-}
-
-function writeTierCache(tier: RSSSourceTier, opportunities: Opportunity[]): void {
-  try {
-    localStorage.setItem(
-      CACHE_KEYS[tier],
-      JSON.stringify({
-        updatedAt: new Date().toISOString(),
-        opportunities,
-      })
-    );
-  } catch {
-    // Cache is optional best effort.
+    return { name: feed.name, url: feed.url, tier: feed.tier, ok: false, itemCount: 0, opportunities: [], lastChecked: checkedAt };
   }
 }
 
 export function getCachedRSSOpportunities(): Opportunity[] {
   const all: Opportunity[] = [];
-  for (const tier of [1, 2, 3] as RSSSourceTier[]) {
-    const cache = readTierCache(tier);
-    if (cache) all.push(...cache.opportunities);
+  for (const feed of FEEDS) {
+    const cache = readFeedCache(feed);
+    if (cache && Date.now() - new Date(cache.updatedAt).getTime() < CACHE_TTL_MS_BY_TIER[feed.tier]) {
+      all.push(...cache.opportunities);
+    }
   }
   return deduplicateOpportunities(all);
 }
@@ -317,62 +310,31 @@ export function filterRSSOpportunityForProfile(opportunity: Opportunity, profile
   return countryText.includes(profileCountry) || countryText.includes(citizenship) || countryText.includes('global') || countryText.includes('worldwide');
 }
 
-export async function fetchRSSSourceStatus(): Promise<RSSSourceStatus[]> {
-  const settled = await Promise.allSettled(FEEDS.map((feed) => fetchSingleFeed(feed)));
+export async function fetchRSSSources(onSource?: (result: FeedResult, completed: number) => void): Promise<FeedResult[]> {
+  let completed = 0;
+  const settled = await Promise.allSettled(FEEDS.map((feed) => fetchSingleFeed(feed).then((value) => {
+    completed += 1;
+    onSource?.(value, completed);
+    return value;
+  })));
 
-  return settled.map((result, index) => {
+  const results = settled.map((result, index) => {
     const feed = FEEDS[index];
-
-    if (result.status === 'fulfilled') {
-      return {
-        name: result.value.name,
-        tier: result.value.tier,
-        ok: result.value.ok,
-        itemCount: result.value.itemCount,
-        url: feed?.url ?? '',
-      };
-    }
-
-    return {
-      name: feed?.name ?? `Source ${index + 1}`,
-      tier: feed?.tier ?? 1,
-      ok: false,
-      itemCount: 0,
-      url: feed?.url ?? '',
-    };
+    return result.status === 'fulfilled'
+      ? result.value
+      : { name: feed.name, url: feed.url, tier: feed.tier, ok: false, itemCount: 0, opportunities: [], lastChecked: new Date().toISOString() };
   });
+  return results;
+}
+
+export async function fetchRSSSourceStatus(): Promise<RSSSourceStatus[]> {
+  const results = await fetchRSSSources();
+  return results.map(({ opportunities, ...status }) => status);
 }
 
 export async function fetchAllRSSFeeds(): Promise<Opportunity[]> {
-  const allOpportunities: Opportunity[] = [];
-
-  for (const tier of [1, 2, 3] as RSSSourceTier[]) {
-    const cache = readTierCache(tier);
-    const ttl = CACHE_TTL_MS_BY_TIER[tier];
-
-    if (cache && Date.now() - new Date(cache.updatedAt).getTime() < ttl) {
-      allOpportunities.push(...cache.opportunities);
-      continue;
-    }
-
-    const feedGroup = FEEDS.filter((feed) => feed.tier === tier);
-    const settled = await Promise.allSettled(feedGroup.map((feed) => fetchSingleFeed(feed)));
-
-    const results = settled
-      .filter((result): result is PromiseFulfilledResult<{ name: string; tier: RSSSourceTier; ok: boolean; itemCount: number; opportunities: Opportunity[] }> => result.status === 'fulfilled')
-      .map((result) => result.value);
-
-    const tierOpps = deduplicateOpportunities(results.flatMap((result) => result.opportunities))
-      .filter((opportunity) => !opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now())
-      .filter((opportunity) => !EXCLUDE_PATTERNS.some((pattern) => `${opportunity.title} ${opportunity.description}`.toLowerCase().includes(pattern)));
-
-    writeTierCache(tier, tierOpps);
-    allOpportunities.push(...tierOpps);
-  }
-
-  return deduplicateOpportunities(allOpportunities)
-    .filter((opportunity) => !opportunity.deadline || new Date(opportunity.deadline).getTime() >= Date.now())
-    .filter((opportunity) => !EXCLUDE_PATTERNS.some((pattern) => `${opportunity.title} ${opportunity.description}`.toLowerCase().includes(pattern)));
+  const results = await fetchRSSSources();
+  return deduplicateOpportunities(results.flatMap((result) => result.opportunities));
 }
 
 export async function fetchRSSOpportunities(): Promise<RSSAggregateResult> {
@@ -383,32 +345,21 @@ export async function fetchRSSOpportunities(): Promise<RSSAggregateResult> {
     updatedAt: new Date().toISOString(),
     sourceStatuses: FEEDS.map((feed) => ({
       name: feed.name,
+      url: feed.url,
       tier: feed.tier,
       ok: true,
       itemCount: opportunities.filter((opportunity) => opportunity.sources.some((source) => source.sourceName === feed.name)).length,
+      lastChecked: new Date().toISOString(),
     })),
   };
 }
 
 export function shouldRefreshRSSCache(): boolean {
-  for (const tier of [1, 2, 3] as RSSSourceTier[]) {
-    const cache = readTierCache(tier);
-    if (!cache) return true;
-    const age = Date.now() - new Date(cache.updatedAt).getTime();
-    if (age > CACHE_TTL_MS_BY_TIER[tier]) return true;
-  }
-  return false;
+  return getCachedRSSOpportunities().length === 0;
 }
 
 export function getRSSCacheAgeMs(): number {
-  const latest = [1, 2, 3]
-    .map((tier) => readTierCache(tier as RSSSourceTier))
-    .filter(Boolean)
-    .map((entry) => new Date(entry!.updatedAt).getTime())
-    .sort((a, b) => b - a)[0];
-
-  if (!latest) return Number.POSITIVE_INFINITY;
-  return Date.now() - latest;
+  return 0;
 }
 
 export function shouldRecommendOpportunityForProfile(opportunity: Opportunity, profile: UserProfile): boolean {

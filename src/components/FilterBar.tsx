@@ -9,9 +9,10 @@ export const FilterBar: React.FC = () => {
   const { filters, updateFilter, resetFilters, opportunities } = useApp();
   const sources = Array.from(new Set(opportunities.flatMap((opportunity) => opportunity.sources.map((source) => source.sourceName)))).sort();
 
-  const toggle = <T,>(key: 'selectedCategories' | 'modalities' | 'fundingTypes', value: T) => {
-    const current = filters[key] as T[];
-    updateFilter(key, current.includes(value) ? current.filter((item) => item !== value) : [...current, value] as never);
+  const toggle = <T extends Category | Modality | FundingType,>(key: 'selectedCategories' | 'modalities' | 'fundingTypes', value: T) => {
+    const current = filters[key] as unknown[];
+    const next = current.includes(value) ? current.filter((item) => item !== value) : [...current, value];
+    updateFilter(key, next as never);
   };
 
   const active = filters.searchQuery.trim() || filters.selectedCategories.length || filters.modalities.length || filters.fundingTypes.length || filters.deadlineFilter !== 'all' || filters.eligibleOnly || filters.worldwideOnly || filters.freeApplicationOnly || filters.savedOnly;

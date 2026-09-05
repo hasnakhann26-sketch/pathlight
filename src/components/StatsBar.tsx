@@ -5,6 +5,7 @@ import { Activity, Clock3 } from 'lucide-react';
 export const StatsBar: React.FC = () => {
   const { opportunities, rssStatus } = useApp();
   const healthyFeedCount = rssStatus.sourceStatus.filter((source) => source.ok).length;
+  const completedFeedCount = rssStatus.sourceStatus.length;
   const totalSources = 12;
   const updatedText = rssStatus.lastUpdated ? `Updated ${Math.max(1, Math.round((Date.now() - new Date(rssStatus.lastUpdated).getTime()) / 60000))} min ago` : 'Updated just now';
 
@@ -14,7 +15,7 @@ export const StatsBar: React.FC = () => {
     >
       <div className="inline-flex items-center gap-1.5">
         <Activity className="h-3.5 w-3.5" />
-        <span>{healthyFeedCount}/{totalSources} sources loaded</span>
+        <span>{rssStatus.isLoading ? `${completedFeedCount}/${totalSources} sources loaded` : `${healthyFeedCount}/${totalSources} sources · ${opportunities.length.toLocaleString()} opportunities`}</span>
       </div>
 
       <span className="text-slate-400">·</span>

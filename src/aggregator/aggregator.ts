@@ -49,17 +49,16 @@ function hash(value: string) {
 function inferCategory(text: string): Category {
   const value = text.toLowerCase();
   if (/\bmun\b|model united nations|delegate conference/.test(value)) return 'MUN';
-  if (/essay|writing|poetry|storytelling|article/.test(value)) return 'Essay / Writing';
-  if (/olympiad|quiz|mathematical|physics competition|chemistry competition/.test(value)) return 'Quiz / Olympiad';
-  if (/scholarship|tuition/.test(value)) return 'Scholarship';
+  if (/essay|writing|poetry|storytelling|article|olympiad|quiz|mathematical|physics competition|chemistry competition/.test(value)) return 'Competitions';
+  if (/scholarship|tuition/.test(value)) return 'Scholarships';
   if (/fellowship/.test(value)) return 'Fellowships';
-  if (/grant|funding|award/.test(value)) return 'Grant';
-  if (/exchange|travel|summer school|study abroad/.test(value)) return 'Travel / Exchange';
+  if (/grant|funding|award/.test(value)) return 'Grants';
+  if (/exchange|travel|summer school|study abroad/.test(value)) return 'Exchanges';
   if (/research|lab|scientist/.test(value)) return 'Research';
   if (/internship|intern/.test(value)) return 'Internships';
-  if (/conference|summit|forum|symposium/.test(value)) return 'Conference / Summit';
-  if (/hackathon|competition|contest|challenge|prize/.test(value)) return 'Competition / Hackathon';
-  return 'Professional opportunities';
+  if (/conference|summit|forum|symposium/.test(value)) return 'Conferences';
+  if (/hackathon|competition|contest|challenge|prize/.test(value)) return 'Hackathons';
+  return 'Competitions';
 }
 
 function extractDeadline(text: string) {
