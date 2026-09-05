@@ -22,7 +22,7 @@ const MainView: React.FC = () => {
 
   if (currentView === 'applications') {
     return (
-      <div className="min-h-screen bg-[#f5f5f3] text-slate-900">
+      <div className="min-h-screen bg-white text-slate-900">
         <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
         <div className="min-h-screen lg:pl-72">
           <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
@@ -38,7 +38,7 @@ const MainView: React.FC = () => {
 
   if (currentView === 'sources') {
     return (
-      <div className="min-h-screen bg-[#f5f5f3] text-slate-900">
+      <div className="min-h-screen bg-white text-slate-900">
         <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
         <div className="min-h-screen lg:pl-72">
           <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
@@ -51,7 +51,7 @@ const MainView: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f3] text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
       <div className="min-h-screen lg:pl-72">
         <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
@@ -139,4 +139,3 @@ export default function App() {
     </AppProvider>
   );
 }
-

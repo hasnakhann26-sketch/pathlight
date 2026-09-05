@@ -19,6 +19,7 @@ import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine'
 import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
 import { GrantsGovConnector } from '../engine/connectors';
 import { fetchAllRSSFeeds, fetchRSSSourceStatus } from '../engine/RSSAggregator';
+import { normalizeOpportunityCategory } from '../engine/categoryNormalization';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -126,6 +127,14 @@ const INITIAL_FILTERS: FilterState = {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+const normalizeOpportunityRecord = (opportunity: Opportunity): Opportunity => ({
+  ...opportunity,
+  category: normalizeOpportunityCategory(
+    opportunity.category,
+    `${opportunity.title} ${opportunity.subcategory || ''} ${opportunity.description || ''}`
+  ),
+});
+
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile>(() => {
     try {
@@ -190,13 +199,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...parsed]);
+          return deduplicateOpportunities([...DEMO_OPPORTUNITIES, ...parsed.map(normalizeOpportunityRecord)]);
         }
       }
     } catch (e) {
       console.warn('Failed to load custom opportunities', e);
     }
-    return deduplicateOpportunities(DEMO_OPPORTUNITIES);
+    return deduplicateOpportunities(DEMO_OPPORTUNITIES.map(normalizeOpportunityRecord));
   });
 
   const [selectedOpportunity, setSelectedOpportunity] = useState<Opportunity | null>(null);
@@ -333,7 +342,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
 
     if (fetched.length > 0) {
-      setOpportunities((prev) => deduplicateOpportunities([...prev, ...fetched]));
+      setOpportunities((prev) => deduplicateOpportunities([...prev, ...fetched.map(normalizeOpportunityRecord)]));
     }
 
     setRssStatus({
@@ -414,7 +423,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       };
 
       if (grantsResult.success && grantsResult.records.length > 0) {
-        setOpportunities((prev) => deduplicateOpportunities([...prev, ...grantsResult.records]));
+        setOpportunities((prev) => deduplicateOpportunities([...prev, ...grantsResult.records.map(normalizeOpportunityRecord)]));
       }
     } catch (error) {
       console.warn('Connector fetch error:', error);
@@ -672,7 +681,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           canonicalOpportunityId: item.canonicalOpportunityId || `opp_custom_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           title: item.title,
           organization: item.organization,
-          category: item.category,
+          category: normalizeOpportunityCategory(item.category, `${item.title} ${item.subcategory || ''} ${item.description || ''}`),
           subcategory: item.subcategory,
           description: item.description || 'Imported verified opportunity record.',
           officialSourceUrl: item.officialSourceUrl || 'https://pathlight.org',
@@ -717,9 +726,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       setOpportunities((prev) => {
-        const combined = deduplicateOpportunities([...prev, ...validItems]);
+        const combined = deduplicateOpportunities([...prev, ...validItems.map(normalizeOpportunityRecord)]);
         try {
-          localStorage.setItem(STORAGE_KEYS.CUSTOM_OPPS, JSON.stringify(validItems));
+          localStorage.setItem(STORAGE_KEYS.CUSTOM_OPPS, JSON.stringify(validItems.map(normalizeOpportunityRecord)));
         } catch (e) {
           console.warn('Failed to save imported opps', e);
         }
@@ -736,7 +745,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const resetDatasetToDefault = () => {
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_OPPS);
-    setOpportunities(deduplicateOpportunities(DEMO_OPPORTUNITIES));
+    setOpportunities(deduplicateOpportunities(DEMO_OPPORTUNITIES.map(normalizeOpportunityRecord)));
   };
 
   return (
