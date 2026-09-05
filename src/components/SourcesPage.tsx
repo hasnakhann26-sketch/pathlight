@@ -13,7 +13,7 @@ const FEED_DEFINITIONS = [
   { name: 'Student Competitions', url: 'https://studentcompetitions.com/rss', tier: 2 },
   { name: 'Opportunities Corners', url: 'https://opportunitiescorners.com/feed/', tier: 2 },
   { name: 'Best Delegate', url: 'https://bestdelegate.com/feed/', tier: 2 },
-  { name: 'My MUN', url: 'https://mymun.com/', tier: 3 },
+  { name: 'My MUN', url: 'https://mymun.com/conferences', tier: 3 },
   { name: 'Best Delegate MUN', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3 },
 ] as const;
 

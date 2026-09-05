@@ -1,23 +1,5 @@
 import { Opportunity } from '../types';
-
-const normalizeCategory = (rawCategory?: string): Opportunity['category'] => {
-  const value = (rawCategory || '').trim().toLowerCase();
-
-  if (!value) return 'Competitions';
-
-  if (value.includes('scholarship')) return 'Scholarships';
-  if (value.includes('fellowship')) return 'Fellowships';
-  if (value.includes('research')) return 'Research';
-  if (value.includes('exchange') || value.includes('travel') || value.includes('study abroad')) return 'Exchanges';
-  if (value.includes('grant') || value.includes('funding')) return 'Grants';
-  if (value.includes('hackathon') || value.includes('coding') || value.includes('build')) return 'Hackathons';
-  if (value.includes('internship') || value.includes('intern')) return 'Internships';
-  if (value.includes('mun') || value.includes('model united')) return 'MUN';
-  if (value.includes('conference') || value.includes('summit') || value.includes('forum')) return 'Conferences';
-  if (value.includes('competition') || value.includes('contest') || value.includes('award') || value.includes('essay') || value.includes('writing') || value.includes('quiz') || value.includes('olympiad') || value.includes('prize')) return 'Competitions';
-
-  return 'Competitions';
-};
+import { normalizeOpportunityCategory } from '../engine/categoryNormalization';
 
 const seedPrograms = [
   { title: 'Chevening Scholarships', organization: 'Foreign, Commonwealth & Development Office', category: 'Scholarships', subcategory: 'Postgraduate scholarships', country: 'Worldwide', funding: 'fully_funded', modality: 'hybrid', deadline: '2026-11-30', officialSourceUrl: 'https://www.chevening.org/scholarships/' },
@@ -151,7 +133,7 @@ export const DEMO_OPPORTUNITIES: Opportunity[] = seedPrograms.map((program, inde
   canonicalOpportunityId: `opp_fallback_${index + 1}_${program.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
   title: program.title,
   organization: program.organization,
-  category: normalizeCategory(program.category),
+  category: normalizeOpportunityCategory(program.category, program.title, program.subcategory, program.organization),
   subcategory: program.subcategory,
   description: `${program.title} is a verified international opportunity offered by ${program.organization}. It is open to eligible students, young professionals, and aspiring leaders from around the world and includes a strong focus on leadership, innovation, research, or public service.`,
   officialSourceUrl: program.officialSourceUrl,

@@ -22,7 +22,7 @@ const MainView: React.FC = () => {
 
   if (currentView === 'applications') {
     return (
-      <div className="min-h-screen bg-[#f5f5f3] text-slate-900">
+      <div className="min-h-screen bg-white text-slate-900">
         <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
         <div className="min-h-screen lg:pl-72">
           <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
@@ -38,7 +38,7 @@ const MainView: React.FC = () => {
 
   if (currentView === 'sources') {
     return (
-      <div className="min-h-screen bg-[#f5f5f3] text-slate-900">
+      <div className="min-h-screen bg-white text-slate-900">
         <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
         <div className="min-h-screen lg:pl-72">
           <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
@@ -51,7 +51,7 @@ const MainView: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f5f3] text-slate-900">
+    <div className="min-h-screen bg-white text-slate-900">
       <Sidebar mobileOpen={mobileSidebarOpen} setMobileOpen={setMobileSidebarOpen} />
       <div className="min-h-screen lg:pl-72">
         <Header onToggleMobileSidebar={() => setMobileSidebarOpen(true)} />
@@ -78,13 +78,13 @@ const MainView: React.FC = () => {
           </div>
 
           {rssStatus.isLoading ? (
-            <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-sm">
+            <div className="mb-6 flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
               <div className="h-4 w-4 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
               <span>Loading live opportunities from 12 sources...</span>
             </div>
           ) : null}
 
-          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3">
             <button
               type="button"
               onClick={() => updateFilter('eligibleOnly', !filters.eligibleOnly)}
@@ -139,4 +139,3 @@ export default function App() {
     </AppProvider>
   );
 }
-

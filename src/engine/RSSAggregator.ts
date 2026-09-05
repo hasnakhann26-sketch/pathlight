@@ -1,10 +1,12 @@
 import { Category, Opportunity, UserProfile } from '../types';
 import { deduplicateOpportunities } from './deduplication';
+import { normalizeOpportunityCategory } from './categoryNormalization';
 
 export type RSSSourceTier = 1 | 2 | 3;
 
 export interface RSSSourceStatus {
   name: string;
+  url: string;
   tier: RSSSourceTier;
   ok: boolean;
   itemCount: number;
@@ -34,8 +36,8 @@ const FEEDS: RSSFeedDefinition[] = [
   { name: 'Student Competitions', url: 'https://studentcompetitions.com/rss', tier: 2, alternateUrls: ['https://studentcompetitions.com/feed', 'https://studentcompetitions.com/feed.xml'] },
   { name: 'Opportunities Corners', url: 'https://opportunitiescorners.com/feed/', tier: 2, alternateUrls: ['https://opportunitiescorners.com/rss/'] },
   { name: 'Best Delegate', url: 'https://bestdelegate.com/feed/', tier: 2, alternateUrls: ['https://bestdelegate.com/rss/', 'https://bestdelegate.com/feed.xml'] },
-  { name: 'My MUN', url: 'https://mymun.com/', tier: 3, alternateUrls: ['https://mymun.com/conferences', 'https://mymun.com'] },
-  { name: 'Best Delegate MUN', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3, alternateUrls: ['https://bestdelegate.com/model-un-conferences/feed', 'https://bestdelegate.com/model-un-conferences/rss/'] },
+  { name: 'My MUN', url: 'https://mymun.com/conferences', tier: 3, alternateUrls: ['https://mymun.com/conferences/'] },
+  { name: 'Best Delegate MUN', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3, alternateUrls: ['https://bestdelegate.com/model-un-conferences'] },
 ];
 
 const CACHE_KEYS: Record<RSSSourceTier, string> = {
@@ -72,13 +74,7 @@ function cleanText(value: string | null | undefined): string {
     .trim();
 }
 
-const RSS_PROXY_CANDIDATES = [
-  (url: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://thingproxy.freeboard.io/fetch/?url=${encodeURIComponent(url)}`,
-  (url: string) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
-  (url: string) => `https://cors-anywhere.herokuapp.com/${url}`,
-];
+const NETLIFY_FEED_FUNCTION_PATH = '/.netlify/functions/fetch-feed?url=';
 
 async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string> {
   const controller = new AbortController();
@@ -96,23 +92,10 @@ async function fetchWithTimeout(url: string, timeoutMs = 15000): Promise<string>
 }
 
 async function fetchFeedTextWithFallback(feedUrl: string): Promise<string> {
-  const urls = new Set<string>();
-  urls.add(feedUrl);
-  RSS_PROXY_CANDIDATES.forEach((builder) => urls.add(builder(feedUrl)));
-
-  const candidates = Array.from(urls);
-  let lastError: unknown;
-
-  for (const candidate of candidates) {
-    try {
-      const text = await fetchWithTimeout(candidate, 15000);
-      if (text && text.trim().length > 0) return text;
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  throw lastError ?? new Error(`Unable to fetch RSS feed: ${feedUrl}`);
+  const functionUrl = `${NETLIFY_FEED_FUNCTION_PATH}${encodeURIComponent(feedUrl)}`;
+  const text = await fetchWithTimeout(functionUrl, 15000);
+  if (text && text.trim().length > 0) return text;
+  throw new Error(`Empty response from fetch-feed function for ${feedUrl}`);
 }
 
 async function fetchFeedTextWithFallbacks(feed: RSSFeedDefinition): Promise<string> {
@@ -198,7 +181,7 @@ function normalizeOpportunity(feed: RSSFeedDefinition, rawTitle: string, rawDesc
   const fullText = `${title} ${description} ${pubDate}`;
   const deadline = extractDeadline(fullText);
   const worldwide = inferWorldwide(fullText);
-  const category = inferCategory(title, description);
+  const category = normalizeOpportunityCategory(inferCategory(title, description), title, description, feed.name);
   const today = new Date().toISOString();
   const normalizedTitle = title.replace(/\s+/g, ' ').trim();
 
@@ -246,17 +229,46 @@ function parseRSSXml(xmlText: string, feed: RSSFeedDefinition): Opportunity[] {
     .filter(Boolean) as Opportunity[];
 }
 
-async function fetchFeedText(feedUrl: string): Promise<string> {
-  return fetchFeedTextWithFallback(feedUrl);
+function parseHtmlFeed(htmlText: string, feed: RSSFeedDefinition): Opportunity[] {
+  const document = new DOMParser().parseFromString(htmlText, 'text/html');
+  const anchors = Array.from(document.querySelectorAll('a[href]'));
+  const seen = new Set<string>();
+  const opportunities: Opportunity[] = [];
+
+  for (const anchor of anchors) {
+    if (opportunities.length >= 120) break;
+    const title = cleanText(anchor.textContent || '');
+    if (!title || title.length < 12) continue;
+
+    const href = anchor.getAttribute('href') || '';
+    const link = href.startsWith('http') ? href : new URL(href, feed.url).toString();
+    if (seen.has(link)) continue;
+    seen.add(link);
+
+    const opportunity = normalizeOpportunity(feed, title, '', link);
+    if (opportunity) {
+      opportunities.push(opportunity);
+    }
+  }
+
+  return opportunities;
+}
+
+function parseFeed(feed: RSSFeedDefinition, feedText: string): Opportunity[] {
+  const rssItems = parseRSSXml(feedText, feed);
+  if (rssItems.length > 0) return rssItems;
+  if (feed.tier === 3) return parseHtmlFeed(feedText, feed);
+  return [];
 }
 
 async function fetchSingleFeed(feed: RSSFeedDefinition): Promise<{ name: string; tier: RSSSourceTier; ok: boolean; itemCount: number; opportunities: Opportunity[] }> {
   try {
     const text = await fetchFeedTextWithFallbacks(feed);
-    const opportunities = parseRSSXml(text, feed);
+    const opportunities = parseFeed(feed, text);
     const filtered = opportunities.filter((opp) => !EXCLUDE_PATTERNS.some((pattern) => `${opp.title} ${opp.description}`.toLowerCase().includes(pattern)));
-    console.log(`${feed.name}: ${filtered.length} items (${filtered.length > 0 ? 'success' : 'fail'})`);
-    return { name: feed.name, tier: feed.tier, ok: true, itemCount: filtered.length, opportunities: filtered };
+    const ok = filtered.length > 0;
+    console.log(`${feed.name}: ${filtered.length} items (${ok ? 'success' : 'fail'})`);
+    return { name: feed.name, tier: feed.tier, ok, itemCount: filtered.length, opportunities: filtered };
   } catch (error) {
     console.log(`${feed.name}: fail (0)`);
     return { name: feed.name, tier: feed.tier, ok: false, itemCount: 0, opportunities: [] };
@@ -383,6 +395,7 @@ export async function fetchRSSOpportunities(): Promise<RSSAggregateResult> {
     updatedAt: new Date().toISOString(),
     sourceStatuses: FEEDS.map((feed) => ({
       name: feed.name,
+      url: feed.url,
       tier: feed.tier,
       ok: true,
       itemCount: opportunities.filter((opportunity) => opportunity.sources.some((source) => source.sourceName === feed.name)).length,

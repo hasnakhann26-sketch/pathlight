@@ -10,7 +10,7 @@ export const OpportunityDetailModal: React.FC = () => {
   const saved = isSaved(selectedOpportunity.canonicalOpportunityId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/20 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 p-4 backdrop-blur-sm">
       <div className="relative w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -86,4 +86,3 @@ export const OpportunityDetailModal: React.FC = () => {
     </div>
   );
 };
-
