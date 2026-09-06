@@ -18,7 +18,7 @@ import { deduplicateOpportunities } from '../engine/deduplication';
 import { generateGoalDiscoverySuggestions } from '../engine/goalDiscoveryEngine';
 import { createDiscoveryProvider, DiscoverySignals } from '../engine/aiDiscovery';
 import { GrantsGovConnector } from '../engine/connectors';
-import { fetchRSSSources, getCachedRSSOpportunities } from '../engine/RSSAggregator';
+import { fetchRSSSources, getCachedRSSOpportunities, RSSSourceStatus } from '../engine/RSSAggregator';
 
 interface ScoredOpportunity {
   opportunity: Opportunity;
@@ -90,7 +90,7 @@ interface AppContextType {
     closingSoonCount: number;
   };
 
-  rssStatus: { isLoading: boolean; lastUpdated: string | null; sourceStatus: Array<{ name: string; url: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number; lastChecked: string | null }> };
+  rssStatus: { isLoading: boolean; lastUpdated: string | null; sourceStatus: RSSSourceStatus[] };
 
   viewMode: 'grid' | 'list';
   setViewMode: (mode: 'grid' | 'list') => void;
@@ -234,7 +234,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [rssStatus, setRssStatus] = useState({
     isLoading: false,
     lastUpdated: null as string | null,
-    sourceStatus: [] as Array<{ name: string; url: string; tier: 1 | 2 | 3; ok: boolean; itemCount: number; lastChecked: string | null }>,
+    sourceStatus: [] as RSSSourceStatus[],
   });
 
   const activeView = currentView;

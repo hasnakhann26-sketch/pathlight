@@ -1,21 +1,7 @@
 import React, { useMemo } from 'react';
 import { RefreshCw, Globe, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-
-const FEED_DEFINITIONS = [
-  { name: 'Opportunity Desk', url: 'https://opportunitydesk.org/feed/', tier: 1 },
-  { name: 'Youth Op', url: 'https://www.youthop.com/feed', tier: 1 },
-  { name: 'OYA Opportunities', url: 'https://oyaop.com/feed/', tier: 1 },
-  { name: 'Opportunities For Youth', url: 'https://opportunitiesforyouth.org/feed/', tier: 1 },
-  { name: 'Opportunities Radar', url: 'https://opportunitiesradar.com/feed/', tier: 1 },
-  { name: 'Funds For NGOs', url: 'https://www2.fundsforngos.org/feed/', tier: 2 },
-  { name: 'Global Grants Hub', url: 'https://globalgrantshub.org/feed/', tier: 2 },
-  { name: 'Student Competitions', url: 'https://studentcompetitions.com/rss', tier: 2 },
-  { name: 'Opportunities Corners', url: 'https://opportunitiescorners.com/feed/', tier: 2 },
-  { name: 'Best Delegate', url: 'https://bestdelegate.com/feed/', tier: 2 },
-  { name: 'My MUN', url: 'https://mymun.com/', tier: 3 },
-  { name: 'Best Delegate MUN', url: 'https://bestdelegate.com/model-un-conferences/', tier: 3 },
-] as const;
+import { CONNECTORS } from '../engine/RSSAggregator';
 
 export const SourcesPage: React.FC = () => {
   const { rssStatus, refreshRSSStatus } = useApp();
@@ -44,7 +30,7 @@ export const SourcesPage: React.FC = () => {
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-sm text-slate-500">Total sources</div>
-          <div className="mt-2 text-2xl font-bold text-slate-900">12</div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">{CONNECTORS.length}</div>
         </div>
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="text-sm text-slate-500">Live</div>
@@ -63,7 +49,7 @@ export const SourcesPage: React.FC = () => {
       </div>
 
       <div className="space-y-4">
-        {FEED_DEFINITIONS.map((feed) => {
+        {CONNECTORS.map((feed) => {
           const source = statusByName[feed.name];
           const status = source ? (source.ok ? 'Live' : 'Failed') : 'Loading';
           const badgeClasses = source
@@ -108,7 +94,7 @@ export const SourcesPage: React.FC = () => {
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                 <span>Last checked: {source?.lastChecked ? new Date(source.lastChecked).toLocaleString() : 'Pending'}</span>
-                <span>{source ? (source.ok ? 'Feed responded successfully' : 'Feed failed to return valid data') : 'Waiting for first fetch'}</span>
+                <span>{source ? (source.ok ? 'Feed responded successfully' : source.errorMessage || 'Source unavailable') : 'Waiting for first fetch'}</span>
               </div>
             </div>
           );
